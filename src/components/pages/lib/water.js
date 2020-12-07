@@ -20,13 +20,13 @@ export default class Water{
     this.scene = new THREE.Scene();//场景
     this.renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( this.renderer.domElement );
-    this.camera.position.z = 5;
+    this.camera.position.z = 300;
     let controls = new OrbitControls( this.camera, this.renderer.domElement );
 
 
   }
   init(){
-    this.geometry = new THREE.PlaneGeometry(300, 200, 20);
+    this.geometry = new THREE.PlaneGeometry(700, 200, 20);
     let texture=this.loadTexture();
     var textureLoader = new THREE.TextureLoader();
     var water_png=textureLoader.load(water_png);
@@ -56,32 +56,45 @@ export default class Water{
         attribute vec4 a_Position;
         attribute vec2 a_TexCoord;
         varying vec2 v_TexCoord;
+         float random (in vec2 st) {
+                    return fract(sin(dot(st.xy,
+                                        vec2(12.9898,78.233)))
+                                * 43758.5453123);
+                }
         void main(){
             vUv = uv;
             float x = position.x;
             float y = position.y;
             float PI = 3.141592653589;
-            v_TexCoord = a_TexCoord;
+
+            float sx = 0.0;
+            float sy = 0.0;
             float sz = 0.0;
-            float ti = 0.06;
+
+            float ti = 0.0;
             float index = 1.0;
-            vec2 dir;//波的方向
-            //四条正弦波相加
-            for(int i = 0;i<4;i++){
+            vec2 dir;//水波方向
+            for(int i = 0;i<3;i++){
                 ti = ti + 0.0005;
-                index = index + 0.1;
+                index +=1.0;
                 if(mod(index,2.0)==0.0){
                     dir = vec2(1.0,ti);
                 }else{
                     dir = vec2(-1.0,ti);
                 }
-                float l1 = 2.0 * PI / (0.5);//波长
-                float s1 = 10.0 * 2.0 / l1;//速度
-                float z1 = 1.0 * sin(dot(normalize(dir),vec2(x,y)) * l1 + time * s1);//正弦波方程式
+                float l1 = 2.0 * PI / (0.5 + ti);//波长
+                float s1 = 20.0 * 2.0 / l1;//速度
+                float x1 = 1.0 * dir.x * sin(dot(normalize(dir),vec2(x,y)) * l1 + time * s1);
+                float y1 = 1.0 * dir.y * sin(dot(normalize(dir),vec2(x,y)) * l1 + time * s1);
+                float z1 = 1.0 * sin(dot(normalize(dir),vec2(x,y)) * l1 + time * s1);
+                sx +=x1;
+                sy +=y1;
                 sz +=z1;
             }
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(x,y,sin(sz) * 10.0,1.0);
-            }
+            sx = x + sx;
+            sy = y + sy;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(sx,sy,sin(sz) * 10.0,1.0);
+        }
       `,
       fragmentShader:`
          varying vec2 vUv;
@@ -92,7 +105,7 @@ export default class Water{
          uniform sampler2D uWaterPng;
 
          void main(){
-                 gl_FragColor = texture2D(uWaterUV,vUv);
+                 gl_FragColor = texture2D(uNormalMap,vUv);
               }
       `,
     }); //材质对象Material
@@ -105,8 +118,10 @@ export default class Water{
     var directionalLight = new THREE.DirectionalLight("#ffffff"); // 平行光
     directionalLight.castShadow = true; // 将平行光产生阴影的属性打开
     this.scene.add(directionalLight);
+    this.camera.lookAt(600, 600, 800);
     var point = new THREE.PointLight(0xffffff);
-    point.position.set(400, 200, 300); //点光源位置
+    point.position.set(600, 600, 800); //点光源位置
+
     this.scene.add(point);
     this.scene.add(mesh); //网格模型添加到场景中
   }
