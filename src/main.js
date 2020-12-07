@@ -3,7 +3,13 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router';
+
 import * as THREE from 'three'
+
+
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
+// import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 Vue.config.productionTip = false;
 Vue.use(THREE);
