@@ -40,6 +40,10 @@ export default class Water{
           'type':"f",
           'value':0.0,
         },
+        rand:{
+          'type':"f",
+          'value':1.0,
+        },
         uWaterPng:{
           value:water_png
         },
@@ -49,21 +53,36 @@ export default class Water{
         uNormalMap: {
           value: texture[1]
         },
+        u_lightColor:{
+          value: new THREE.Vector4(1.0,0.6,1.0,1.0)
+        },
+        u_AmbientLight:{
+          value:new THREE.Vector4(1.0,1.0,1.0,1.0)
+        },
+        uLightDirection: {
+          value: new THREE.Vector3(0, 0, 100)
+        }
       },
       vertexShader: `
         uniform float time;
+        uniform float rand;
         varying vec2 vUv;
         attribute vec4 a_Position;
         attribute vec2 a_TexCoord;
         varying vec2 v_TexCoord;
+        varying float v_time;
+        attribute vec4 a_Normal;
+        varying vec4 v_Normal;
          float random (in vec2 st) {
                     return fract(sin(dot(st.xy,
                                         vec2(12.9898,78.233)))
                                 * 43758.5453123);
                 }
         void main(){
+            v_time=time;
             vUv = uv;
             float x = position.x;
+            v_Normal=a_Normal;
             float y = position.y;
             float PI = 3.141592653589;
 
@@ -93,19 +112,59 @@ export default class Water{
             }
             sx = x + sx;
             sy = y + sy;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(sx,sy,sin(sz) * 10.0,1.0);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(sx,sy,sin(sz) * 10.0*rand,1.0);
         }
       `,
       fragmentShader:`
          varying vec2 vUv;
+         //
          uniform sampler2D uWaterUV;
+         //法线rgba
          uniform sampler2D uNormalMap;
+         uniform vec3 u_DiffuseLight;
+         uniform vec3 u_LightDirection;
+         uniform vec4 u_AmbientLight;
+         uniform vec4 u_lightColor;
          precision mediump float;
          varying vec2 v_TexCoord;
+         varying vec4 v_Normal;
          uniform sampler2D uWaterPng;
-
+         float PI=3.1415;
+         varying float v_time;
+         vec2 dHdxy_fwd() {
+                vec2 dSTdx = dFdx( v_TexCoord ); 
+                vec2 dSTdy = dFdy( v_TexCoord ); 
+                float Hll = texture2D( uNormalMap, v_TexCoord ).x; 
+                float dBx = texture2D( uNormalMap, v_TexCoord + dSTdx ).x - Hll; 
+                float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll; 
+                return vec2( dBx, dBy ); 
+         } 
          void main(){
-                 gl_FragColor = texture2D(uNormalMap,vUv);
+                 vec4 DiffuseColor = texture2D(uNormalMap, v_TexCoord);
+                 float x=v_time;
+                 float des=x-floor(x/(PI+2.0))*(PI+2.0);
+                 des=des*0.2;
+                 vec3 NormalMap=texture2D(uNormalMap, vUv*des).rgb;
+                 vec3 LightDir = vec3(u_LightDirection.xy - (gl_FragCoord.xy), u_LightDirection.z);
+                 //vec3 Normal = NormalMap.rgb * 2.0 - 1.0;
+                 
+                 //解码xyz 归一化
+                 vec3 N = normalize(NormalMap* 2.0 - 1.0);
+                 vec3 L = normalize(LightDir);
+                 //计算漫反射
+                 vec3 Diffuse = (u_lightColor.rgb*u_lightColor.a) * max(dot(N, L), 0.0);
+                 //计算环境光
+                 vec3 Ambient = u_AmbientLight.rgb * u_AmbientLight.a;
+                 //归一化点光源
+                 vec3 u_LightDirection = normalize(u_LightDirection); 
+                 //计算光强度
+                 vec3 Intensity = Ambient + Diffuse;
+                 //最终颜色
+                 vec3 FinalColor = DiffuseColor.rgb * Intensity;
+                
+                 float D = length(LightDir);
+                 gl_FragColor = vec4(FinalColor.rgb,DiffuseColor.a);
+                 //gl_FragColor = texture2D(uNormalMap,dHdxy_fwd());
               }
       `,
     }); //材质对象Material
@@ -120,7 +179,7 @@ export default class Water{
     this.scene.add(directionalLight);
     this.camera.lookAt(600, 600, 800);
     var point = new THREE.PointLight(0xffffff);
-    point.position.set(600, 600, 800); //点光源位置
+    point.position.set(0, 0, 100); //点光源位置
 
     this.scene.add(point);
     this.scene.add(mesh); //网格模型添加到场景中
@@ -141,6 +200,7 @@ export default class Water{
     this.renderer.render( this.scene, this.camera );
     // console.log("fsdfs")
     this.material.uniforms.time.value+=0.02;
+    // this.material.uniforms.rand.value=Math.floor(Math.random()*10000000);
     requestAnimationFrame( this.render.bind(this) );
   }
 }
