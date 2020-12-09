@@ -54,7 +54,7 @@ export default class Water{
           value: texture[1]
         },
         u_lightColor:{
-          value: new THREE.Vector4(1.0,0.6,1.0,1.0)
+          value: new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
         u_AmbientLight:{
           value:new THREE.Vector4(1.0,1.0,1.0,1.0)
@@ -112,7 +112,7 @@ export default class Water{
             }
             sx = x + sx;
             sy = y + sy;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(sx,sy,sin(sz) * 10.0*rand,1.0);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
         }
       `,
       fragmentShader:`
@@ -139,12 +139,37 @@ export default class Water{
                 float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll; 
                 return vec2( dBx, dBy ); 
          } 
+         vec2 random(vec2 p){
+            return  -1.0 + 2.0 * fract(
+                sin(
+                    vec2(
+                        dot(p, vec2(127.1,311.7)),
+                        dot(p, vec2(269.5,183.3))
+                    )
+                ) * 43758.5453
+            );
+         }
+         float noise_perlin (vec2 p) {
+            vec2 i = floor(p); // 获取当前网格索引i
+            vec2 f = fract(p); // 获取当前片元在网格内的相对位置
+            // 计算梯度贡献值
+            float a = dot(random(i),f); // 梯度向量与距离向量点积运算
+            float b = dot(random(i + vec2(1., 0.)),f - vec2(1., 0.));
+            float c = dot(random(i + vec2(0., 1.)),f - vec2(0., 1.));
+            float d = dot(random(i + vec2(1., 1.)),f - vec2(1., 1.));
+            // 平滑插值
+            vec2 u = smoothstep(0.,1.,f);
+            // 叠加四个梯度贡献值
+            return sin(mix(mix(a,b,u.x),mix(c,d,u.x),u.y)+v_time);
+        }
          void main(){
                  vec4 DiffuseColor = texture2D(uNormalMap, v_TexCoord);
                  float x=v_time;
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.2;
-                 vec3 NormalMap=texture2D(uNormalMap, vUv*des).rgb;
+                 vec2 vuv_buff=vUv;
+                 // vuv_buff.x=vUv.x*des;
+                 vec3 NormalMap=texture2D(uNormalMap, vuv_buff).rgb;
                  vec3 LightDir = vec3(u_LightDirection.xy - (gl_FragCoord.xy), u_LightDirection.z);
                  //vec3 Normal = NormalMap.rgb * 2.0 - 1.0;
                  
@@ -152,9 +177,9 @@ export default class Water{
                  vec3 N = normalize(NormalMap* 2.0 - 1.0);
                  vec3 L = normalize(LightDir);
                  //计算漫反射
-                 vec3 Diffuse = (u_lightColor.rgb*u_lightColor.a) * max(dot(N, L), 0.0);
+                 vec3 Diffuse = vec3(0.0,0.0,1.0) * max(dot(N, L), 0.0);
                  //计算环境光
-                 vec3 Ambient = u_AmbientLight.rgb * u_AmbientLight.a;
+                 vec3 Ambient = u_lightColor.rgb * u_lightColor.a;
                  //归一化点光源
                  vec3 u_LightDirection = normalize(u_LightDirection); 
                  //计算光强度
@@ -163,7 +188,8 @@ export default class Water{
                  vec3 FinalColor = DiffuseColor.rgb * Intensity;
                 
                  float D = length(LightDir);
-                 gl_FragColor = vec4(FinalColor.rgb,DiffuseColor.a);
+                 //FinalColor.b=noise_perlin(vUv);
+                 gl_FragColor = vec4(Diffuse,1.0);
                  //gl_FragColor = texture2D(uNormalMap,dHdxy_fwd());
               }
       `,
@@ -194,6 +220,7 @@ export default class Water{
     var texture = textureLoader.load(wateruv);
     // 加载凹凸贴图
     var textureBump = textureLoader.load(waternormal);
+    textureBump.wrapS = textureBump.wrapT = THREE.RepeatWrapping;
     return [texture,textureBump]
   }
   render=()=>{
