@@ -26,7 +26,7 @@ export default class Water{
 
   }
   init(){
-    this.geometry = new THREE.PlaneGeometry(700, 200, 20);
+    this.geometry = new THREE.BoxGeometry(700, 200, 50);
     let texture=this.loadTexture();
     var textureLoader = new THREE.TextureLoader();
     var water_png=textureLoader.load(water_png);
@@ -56,11 +56,17 @@ export default class Water{
         u_lightColor:{
           value: new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
+        Resolution: {
+          value: {
+            x: window.innerWidth,
+            y: window.innerHeight
+          }
+        },
         u_AmbientLight:{
           value:new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
-        uLightDirection: {
-          value: new THREE.Vector3(0, 0, 100)
+        u_LightDirection: {
+          value: new THREE.Vector3(100, 100, 100)
         }
       },
       vertexShader: `
@@ -119,6 +125,7 @@ export default class Water{
          varying vec2 vUv;
          //
          uniform sampler2D uWaterUV;
+         uniform vec2 Resolution;
          //法线rgba
          uniform sampler2D uNormalMap;
          uniform vec3 u_DiffuseLight;
@@ -163,23 +170,27 @@ export default class Water{
             return sin(mix(mix(a,b,u.x),mix(c,d,u.x),u.y)+v_time);
         }
          void main(){
-                 vec4 DiffuseColor = texture2D(uNormalMap, v_TexCoord);
+                 vec4 DiffuseColor = texture2D(uNormalMap, vUv);
                  float x=v_time;
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
-                 des=des*0.2;
+                 des=des*0.02;
                  vec2 vuv_buff=vUv;
-                 // vuv_buff.x=vUv.x*des;
+                 //vuv_buff.x=vUv.x*des;
                  vec3 NormalMap=texture2D(uNormalMap, vuv_buff).rgb;
-                 vec3 LightDir = vec3(u_LightDirection.xy - (gl_FragCoord.xy), u_LightDirection.z);
+                 vec3 LightDir = vec3(u_LightDirection.xy - (gl_FragCoord.xy/Resolution.xy), u_LightDirection.z);
+                 vec4 lightColor=u_lightColor;
+                 lightColor.x *= Resolution.x / Resolution.y;
                  //vec3 Normal = NormalMap.rgb * 2.0 - 1.0;
                  
                  //解码xyz 归一化
                  vec3 N = normalize(NormalMap* 2.0 - 1.0);
                  vec3 L = normalize(LightDir);
                  //计算漫反射
+                 //Cdiffuse=(cughr • mdiffiise)max(O, D. I )   漫反射公式
                  vec3 Diffuse = vec3(0.0,0.0,1.0) * max(dot(N, L), 0.0);
+                 // vec3 Diffuse = (lightColor.rgb * vec3(0.0,0.0,0.0)) * max(dot(N, L), 0.0);
                  //计算环境光
-                 vec3 Ambient = u_lightColor.rgb * u_lightColor.a;
+                 vec3 Ambient = u_AmbientLight.rgb * u_AmbientLight.a;
                  //归一化点光源
                  vec3 u_LightDirection = normalize(u_LightDirection); 
                  //计算光强度
