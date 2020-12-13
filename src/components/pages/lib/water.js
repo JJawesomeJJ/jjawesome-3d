@@ -26,7 +26,7 @@ export default class Water{
 
   }
   init(){
-    this.geometry = new THREE.BoxGeometry(700, 200, 50);
+    this.geometry = new THREE.PlaneGeometry(700, 200, 50);
     let texture=this.loadTexture();
     var textureLoader = new THREE.TextureLoader();
     var water_png=textureLoader.load(water_png);
@@ -66,7 +66,7 @@ export default class Water{
           value:new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
         u_LightDirection: {
-          value: new THREE.Vector3(100, 100, 100)
+          value: new THREE.Vector3(0.5, 3.0, 4.0)
         }
       },
       vertexShader: `
@@ -139,13 +139,13 @@ export default class Water{
          float PI=3.1415;
          varying float v_time;
          vec2 dHdxy_fwd() {
-                vec2 dSTdx = dFdx( v_TexCoord ); 
-                vec2 dSTdy = dFdy( v_TexCoord ); 
-                float Hll = texture2D( uNormalMap, v_TexCoord ).x; 
-                float dBx = texture2D( uNormalMap, v_TexCoord + dSTdx ).x - Hll; 
-                float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll; 
-                return vec2( dBx, dBy ); 
-         } 
+                vec2 dSTdx = dFdx( v_TexCoord );
+                vec2 dSTdy = dFdy( v_TexCoord );
+                float Hll = texture2D( uNormalMap, v_TexCoord ).x;
+                float dBx = texture2D( uNormalMap, v_TexCoord + dSTdx ).x - Hll;
+                float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll;
+                return vec2( dBx, dBy );
+         }
          vec2 random(vec2 p){
             return  -1.0 + 2.0 * fract(
                 sin(
@@ -170,37 +170,45 @@ export default class Water{
             return sin(mix(mix(a,b,u.x),mix(c,d,u.x),u.y)+v_time);
         }
          void main(){
-                 vec4 DiffuseColor = texture2D(uNormalMap, vUv);
+                 vec3 LightPost=u_LightDirection;
+                 LightPost=normalize(LightPost);//归一化
+                 //vec4 DiffuseColor = texture2D(uNormalMap, vUv);
+                 vec4 DiffuseColor = vec4(0.2,0.2,0.2,1.0);
                  float x=v_time;
+                 LightPost=LightPost*sin(v_time);
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
                  vec2 vuv_buff=vUv;
-                 //vuv_buff.x=vUv.x*des;
+
+                 // vuv_buff.y=vUv.y*cos(des);
                  vec3 NormalMap=texture2D(uNormalMap, vuv_buff).rgb;
-                 vec3 LightDir = vec3(u_LightDirection.xy - (gl_FragCoord.xy/Resolution.xy), u_LightDirection.z);
+                 vec3 LightDir = vec3(LightPost.xy - (gl_FragCoord.xy/Resolution.xy), LightPost.z);
                  vec4 lightColor=u_lightColor;
+                 //LightDir= LightDir*sin(v_time);
                  lightColor.x *= Resolution.x / Resolution.y;
                  //vec3 Normal = NormalMap.rgb * 2.0 - 1.0;
-                 
+                 float D = length(LightDir);
                  //解码xyz 归一化
                  vec3 N = normalize(NormalMap* 2.0 - 1.0);
+                 // N=N*sin(v_time);
                  vec3 L = normalize(LightDir);
                  //计算漫反射
                  //Cdiffuse=(cughr • mdiffiise)max(O, D. I )   漫反射公式
-                 vec3 Diffuse = vec3(0.0,0.0,1.0) * max(dot(N, L), 0.0);
-                 // vec3 Diffuse = (lightColor.rgb * vec3(0.0,0.0,0.0)) * max(dot(N, L), 0.0);
+                 //vec3 Diffuse = vec3(1.0,1.0,1.0) * max(dot(N, L), 0.0);
+                  vec3 Diffuse = (lightColor.rgb*lightColor.a) * max(dot(N, L), 0.0);
                  //计算环境光
                  vec3 Ambient = u_AmbientLight.rgb * u_AmbientLight.a;
                  //归一化点光源
-                 vec3 u_LightDirection = normalize(u_LightDirection); 
+                 vec3 u_LightDirection = normalize(u_LightDirection);
+                 u_LightDirection=u_LightDirection*sin(v_time);
                  //计算光强度
                  vec3 Intensity = Ambient + Diffuse;
                  //最终颜色
-                 vec3 FinalColor = DiffuseColor.rgb * Intensity;
-                
-                 float D = length(LightDir);
+                 vec3 FinalColor = DiffuseColor.rgb*Intensity;
+
+
                  //FinalColor.b=noise_perlin(vUv);
-                 gl_FragColor = vec4(Diffuse,1.0);
+                 gl_FragColor = vec4(FinalColor,1.0);
                  //gl_FragColor = texture2D(uNormalMap,dHdxy_fwd());
               }
       `,
@@ -209,7 +217,7 @@ export default class Water{
       color: 0x0000ff,
     });
     var mesh = new THREE.Mesh(this.geometry, this.material); //网格模型对象Mesh
-    var ambientLight = new THREE.AmbientLight(0x523318);
+    var ambientLight = new THREE.AmbientLight("#ffffff");
     this.scene.add(ambientLight);
     var directionalLight = new THREE.DirectionalLight("#ffffff"); // 平行光
     directionalLight.castShadow = true; // 将平行光产生阴影的属性打开
@@ -237,7 +245,7 @@ export default class Water{
   render=()=>{
     this.renderer.render( this.scene, this.camera );
     // console.log("fsdfs")
-    this.material.uniforms.time.value+=0.02;
+    this.material.uniforms.time.value+=0.005;
     // this.material.uniforms.rand.value=Math.floor(Math.random()*10000000);
     requestAnimationFrame( this.render.bind(this) );
   }
