@@ -101,11 +101,7 @@ export default class Water{
         void main(){
             v_time=time;
             vUv = uv;
-            vUv += noise(uv);
-            vec2 wv = 1.0-abs(sin(uv));
-            vec2 swv = abs(cos(uv));    
-            wv = mix(wv,swv,wv);
-            pow(1.0-pow(wv.x * wv.y,0.65),2);
+            vUv += noise(uv)*sin(time)*0.4;
             float x = position.x;
             v_Normal=a_Normal;
             float y = position.y;
@@ -194,7 +190,7 @@ export default class Water{
                  //vec4 DiffuseColor = texture2D(uNormalMap, vUv);
                  vec4 DiffuseColor = normalize(vec4(1.0,1.0,1.0,1.0));
                  float x=v_time;
-                 //LightPost=LightPost*sin(v_time);
+                 LightPost=LightPost*sin(v_time);
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
                  vec2 vuv_buff=vUv;
