@@ -1,5 +1,5 @@
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
-import wateruv from '../../../assets/images/wateruv.png'
+import wateruv from '../../../assets/images/timg.jpg'
 import waternormal from '../../../assets/images/waternormals.jpg'
 import * as THREE from 'three'
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
@@ -92,16 +92,16 @@ export default class Water{
                   vec2 i = floor( p );
                   vec2 f = fract( p );
                   vec2 u = f*f*(3.0-2.0*f);
-                  return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), 
+                  return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ),
                                    hash( i + vec2(1.0,0.0) ), u.x),
-                              mix( hash( i + vec2(0.0,1.0) ), 
+                              mix( hash( i + vec2(0.0,1.0) ),
                                    hash( i + vec2(1.0,1.0) ), u.x), u.y);
         }
-       
+
         void main(){
             v_time=time;
             vUv = uv;
-            vUv += noise(uv)*sin(time)*0.4;
+            vUv.xy += noise(uv)*sin(v_time*5.0)*0.49*0.6;
             float x = position.x;
             v_Normal=a_Normal;
             float y = position.y;
@@ -171,6 +171,19 @@ export default class Water{
                 ) * 43758.5453
             );
          }
+         float hash( vec2 p ) {
+            float h = dot(p,vec2(127.1,311.7));
+            return fract(sin(h)*43758.5453123);
+        }
+        float noise( in vec2 p ) {
+                  vec2 i = floor( p );
+                  vec2 f = fract( p );
+                  vec2 u = f*f*(3.0-2.0*f);
+                  return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ),
+                                   hash( i + vec2(1.0,0.0) ), u.x),
+                              mix( hash( i + vec2(0.0,1.0) ),
+                                   hash( i + vec2(1.0,1.0) ), u.x), u.y);
+        }
          float noise_perlin (vec2 p) {
             vec2 i = floor(p); // 获取当前网格索引i
             vec2 f = fract(p); // 获取当前片元在网格内的相对位置
@@ -186,11 +199,14 @@ export default class Water{
         }
          void main(){
                  vec3 LightPost=u_LightDirection;
+                 //vec3 specularColor = pow(max(vec3(0,0,0), dot(reflect(normalize(LightPost), normal),viewDir)), vec3(uShininess));
                  LightPost=normalize(LightPost);//归一化
-                 //vec4 DiffuseColor = texture2D(uNormalMap, vUv);
-                 vec4 DiffuseColor = normalize(vec4(1.0,1.0,1.0,1.0));
+                 vec4 DiffuseColor = normalize(texture2D(uWaterUV, vUv));
+                 //vec4 DiffuseColor1 = normalize(texture2D(uWaterPng, vUv));
+                 //vec4 DiffuseColor = normalize(vec4(0.0,0.0,0.0,0.0));
                  float x=v_time;
-                 LightPost=LightPost*sin(v_time);
+                 //LightPost=LightPost*sin(v_time);
+                 LightPost=LightPost*0.6;
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
                  vec2 vuv_buff=vUv;
