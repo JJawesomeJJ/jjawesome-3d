@@ -79,14 +79,33 @@ export default class Water{
         varying float v_time;
         attribute vec4 a_Normal;
         varying vec4 v_Normal;
-         float random (in vec2 st) {
+        float random (in vec2 st) {
                     return fract(sin(dot(st.xy,
                                         vec2(12.9898,78.233)))
                                 * 43758.5453123);
                 }
+         float hash( vec2 p ) {
+            float h = dot(p,vec2(127.1,311.7));
+            return fract(sin(h)*43758.5453123);
+        }
+        float noise( in vec2 p ) {
+                  vec2 i = floor( p );
+                  vec2 f = fract( p );
+                  vec2 u = f*f*(3.0-2.0*f);
+                  return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), 
+                                   hash( i + vec2(1.0,0.0) ), u.x),
+                              mix( hash( i + vec2(0.0,1.0) ), 
+                                   hash( i + vec2(1.0,1.0) ), u.x), u.y);
+        }
+       
         void main(){
             v_time=time;
             vUv = uv;
+            vUv += noise(uv);
+            vec2 wv = 1.0-abs(sin(uv));
+            vec2 swv = abs(cos(uv));    
+            wv = mix(wv,swv,wv);
+            pow(1.0-pow(wv.x * wv.y,0.65),2);
             float x = position.x;
             v_Normal=a_Normal;
             float y = position.y;
@@ -173,9 +192,9 @@ export default class Water{
                  vec3 LightPost=u_LightDirection;
                  LightPost=normalize(LightPost);//归一化
                  //vec4 DiffuseColor = texture2D(uNormalMap, vUv);
-                 vec4 DiffuseColor = vec4(0.2,0.2,0.2,1.0);
+                 vec4 DiffuseColor = normalize(vec4(1.0,1.0,1.0,1.0));
                  float x=v_time;
-                 LightPost=LightPost*sin(v_time);
+                 //LightPost=LightPost*sin(v_time);
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
                  vec2 vuv_buff=vUv;
@@ -199,8 +218,8 @@ export default class Water{
                  //计算环境光
                  vec3 Ambient = u_AmbientLight.rgb * u_AmbientLight.a;
                  //归一化点光源
-                 vec3 u_LightDirection = normalize(u_LightDirection);
-                 u_LightDirection=u_LightDirection*sin(v_time);
+                 // vec3 u_LightDirection = normalize(u_LightDirection);
+                 // u_LightDirection=u_LightDirection*sin(v_time);
                  //计算光强度
                  vec3 Intensity = Ambient + Diffuse;
                  //最终颜色
