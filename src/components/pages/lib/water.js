@@ -53,6 +53,9 @@ export default class Water{
         uNormalMap: {
           value: texture[1]
         },
+        u_viewPosition:{
+          value:new THREE.Vector3(100.0,100.0,100.0)
+        },
         u_lightColor:{
           value: new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
@@ -79,6 +82,7 @@ export default class Water{
         varying float v_time;
         attribute vec4 a_Normal;
         varying vec4 v_Normal;
+        varying vec3 v_position;
         float random (in vec2 st) {
                     return fract(sin(dot(st.xy,
                                         vec2(12.9898,78.233)))
@@ -134,6 +138,7 @@ export default class Water{
             sx = x + sx;
             sy = y + sy;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+            v_position=vec3(modelViewMatrix*a_Position);
         }
       `,
       fragmentShader:`
@@ -145,6 +150,7 @@ export default class Water{
          uniform sampler2D uNormalMap;
          uniform vec3 u_DiffuseLight;
          uniform vec3 u_LightDirection;
+         uniform vec3 u_viewPosition;
          uniform vec4 u_AmbientLight;
          uniform vec4 u_lightColor;
          precision mediump float;
@@ -153,6 +159,7 @@ export default class Water{
          uniform sampler2D uWaterPng;
          float PI=3.1415;
          varying float v_time;
+         varying vec3 v_position;
          vec2 dHdxy_fwd() {
                 vec2 dSTdx = dFdx( v_TexCoord );
                 vec2 dSTdy = dFdy( v_TexCoord );
@@ -197,16 +204,28 @@ export default class Water{
             // 叠加四个梯度贡献值
             return sin(mix(mix(a,b,u.x),mix(c,d,u.x),u.y)+v_time);
         }
+        // float random (vec2 st) {
+        //     return fract(sin(dot(st.xy,
+        //                          vec2(12.9898,78.233)))*
+        //         43758.5453123);
+        // }
+
          void main(){
                  vec3 LightPost=u_LightDirection;
+                 vec2 vUv2=vUv*random(vUv);
                  //vec3 specularColor = pow(max(vec3(0,0,0), dot(reflect(normalize(LightPost), normal),viewDir)), vec3(uShininess));
                  LightPost=normalize(LightPost);//归一化
                  vec4 DiffuseColor = normalize(texture2D(uWaterUV, vUv));
                  //vec4 DiffuseColor1 = normalize(texture2D(uWaterPng, vUv));
                  //vec4 DiffuseColor = normalize(vec4(0.0,0.0,0.0,0.0));
                  float x=v_time;
-                 //LightPost=LightPost*sin(v_time);
-                 LightPost=LightPost*0.6;
+                 float shininess=100.0;
+                 vec3 specularColor=vec3(1.0,1.0,1.0);
+                 vec3 viewDirection =normalize(u_viewPosition-v_position);
+                 vec3 halfwayDir = normalize(u_LightDirection + viewDirection );
+
+                 LightPost=LightPost*sin(v_time);
+                 LightPost=LightPost*0.2;
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
                  vec2 vuv_buff=vUv;
@@ -221,6 +240,11 @@ export default class Water{
                  float D = length(LightDir);
                  //解码xyz 归一化
                  vec3 N = normalize(NormalMap* 2.0 - 1.0);
+                           //计算光线和法向量的点集
+                  float cosTheta = max(dot(LightPost, N), 0.0);
+                 float specularWeighting = pow(max(dot(N, halfwayDir), 0.0), shininess);
+                  vec3 specular = specularColor.rgb * specularWeighting * step(cosTheta,0.0);
+
                  // N=N*sin(v_time);
                  vec3 L = normalize(LightDir);
                  //计算漫反射
@@ -233,7 +257,7 @@ export default class Water{
                  // vec3 u_LightDirection = normalize(u_LightDirection);
                  // u_LightDirection=u_LightDirection*sin(v_time);
                  //计算光强度
-                 vec3 Intensity = Ambient + Diffuse;
+                 vec3 Intensity = Ambient + Diffuse+specular;
                  //最终颜色
                  vec3 FinalColor = DiffuseColor.rgb*Intensity;
 
