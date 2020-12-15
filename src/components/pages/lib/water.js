@@ -30,6 +30,7 @@ export default class Water{
     let texture=this.loadTexture();
     var textureLoader = new THREE.TextureLoader();
     var water_png=textureLoader.load(water_png);
+    water_png.wrapS = water_png.wrapT = THREE.RepeatWrapping;
     this.material = new THREE.ShaderMaterial({
       map: texture[0],// 普通纹理贴图
       bumpMap:texture[1],//凹凸贴图
@@ -54,7 +55,7 @@ export default class Water{
           value: texture[1]
         },
         u_viewPosition:{
-          value:new THREE.Vector3(100.0,100.0,100.0)
+          value:new THREE.Vector3(0.0,0.0,0.0)
         },
         u_lightColor:{
           value: new THREE.Vector4(1.0,1.0,1.0,1.0)
@@ -69,7 +70,10 @@ export default class Water{
           value:new THREE.Vector4(1.0,1.0,1.0,1.0)
         },
         u_LightDirection: {
-          value: new THREE.Vector3(0.5, 3.0, 4.0)
+          value: new THREE.Vector3(0.5, 0.3, 0.6)
+        },
+        u_rand:{
+          value:Math.random()
         }
       },
       vertexShader: `
@@ -105,8 +109,9 @@ export default class Water{
         void main(){
             v_time=time;
             vUv = uv;
-            vUv.xy += noise(uv)*sin(v_time*5.0)*0.49*0.6;
+            
             float x = position.x;
+            //vUv.xy += noise(uv)*(sin(v_time*6.0)*0.1);
             v_Normal=a_Normal;
             float y = position.y;
             float PI = 3.141592653589;
@@ -159,6 +164,7 @@ export default class Water{
          uniform sampler2D uWaterPng;
          float PI=3.1415;
          varying float v_time;
+         uniform float u_rand;
          varying vec3 v_position;
          vec2 dHdxy_fwd() {
                 vec2 dSTdx = dFdx( v_TexCoord );
@@ -168,6 +174,7 @@ export default class Water{
                 float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll;
                 return vec2( dBx, dBy );
          }
+         
          vec2 random(vec2 p){
             return  -1.0 + 2.0 * fract(
                 sin(
@@ -191,6 +198,23 @@ export default class Water{
                               mix( hash( i + vec2(0.0,1.0) ),
                                    hash( i + vec2(1.0,1.0) ), u.x), u.y);
         }
+        float noise_2d(vec2 uv){
+                   vec2 i = floor(uv); // 获取当前网格索引i
+                   vec2 f = fract(uv); // 获取当前片元在网格内的相对位置
+                  float a = dot(random( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) );
+                  float b = dot( random( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) );
+                  float c = dot( random( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) );
+                  float d = dot( random( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) );
+
+                  //a b 、c d 在x轴连续
+                  float ab= mix(a,b,uv.x);
+                  float cd = mix(b,c,uv.x);
+
+                  //ab cd 在y轴连续
+                  float noise = mix(ab,cd,uv.y);
+                  return noise;
+
+        }
          float noise_perlin (vec2 p) {
             vec2 i = floor(p); // 获取当前网格索引i
             vec2 f = fract(p); // 获取当前片元在网格内的相对位置
@@ -212,10 +236,13 @@ export default class Water{
 
          void main(){
                  vec3 LightPost=u_LightDirection;
-                 vec2 vUv2=vUv*random(vUv);
+                 //vec2 vuv2=noise_2d(vUv)+vUv;
+                 vec2 vuv2=(noise_2d(vUv)*abs(sin(v_time*50.0*noise_2d(vUv))))*0.02+vUv;
+                 //vec2 vUv2=vUv*random(vUv);
                  //vec3 specularColor = pow(max(vec3(0,0,0), dot(reflect(normalize(LightPost), normal),viewDir)), vec3(uShininess));
                  LightPost=normalize(LightPost);//归一化
-                 vec4 DiffuseColor = normalize(texture2D(uWaterUV, vUv));
+                 // uWaterUV=uWaterUV*(sin(v_time*10.0*noise(vUv))*0.2+0.5);
+                 vec4 DiffuseColor = normalize(texture2D(uWaterUV, vuv2));
                  //vec4 DiffuseColor1 = normalize(texture2D(uWaterPng, vUv));
                  //vec4 DiffuseColor = normalize(vec4(0.0,0.0,0.0,0.0));
                  float x=v_time;
@@ -224,7 +251,9 @@ export default class Water{
                  vec3 viewDirection =normalize(u_viewPosition-v_position);
                  vec3 halfwayDir = normalize(u_LightDirection + viewDirection );
 
-                 LightPost=LightPost*sin(v_time);
+                //LightPost=LightPost*sin(v_time);
+                 //vec3 LightPost2=LightPost*sin(v_time*20.0);
+                 vec3 LightPost2=LightPost*-0.42818266949567585;
                  LightPost=LightPost*0.2;
                  float des=x-floor(x/(PI+2.0))*(PI+2.0);
                  des=des*0.02;
@@ -239,9 +268,12 @@ export default class Water{
                  //vec3 Normal = NormalMap.rgb * 2.0 - 1.0;
                  float D = length(LightDir);
                  //解码xyz 归一化
+                 NormalMap.z=NormalMap.z*(sin(v_time*10.0*noise(vUv))*0.2+0.5+noise(vUv)*0.01)+0.3;
                  vec3 N = normalize(NormalMap* 2.0 - 1.0);
                            //计算光线和法向量的点集
-                  float cosTheta = max(dot(LightPost, N), 0.0);
+                           //
+                 vec3 N2 = normalize(NormalMap* 2.0 - 1.0);
+                 float cosTheta = max(dot(LightPost2*0.81955, N+10.0), 0.0);
                  float specularWeighting = pow(max(dot(N, halfwayDir), 0.0), shininess);
                   vec3 specular = specularColor.rgb * specularWeighting * step(cosTheta,0.0);
 
@@ -257,9 +289,9 @@ export default class Water{
                  // vec3 u_LightDirection = normalize(u_LightDirection);
                  // u_LightDirection=u_LightDirection*sin(v_time);
                  //计算光强度
-                 vec3 Intensity = Ambient + Diffuse+specular;
+                 vec3 Intensity = Ambient + Diffuse;
                  //最终颜色
-                 vec3 FinalColor = DiffuseColor.rgb*Intensity;
+                 vec3 FinalColor = DiffuseColor.rgb*Intensity+specular;
 
 
                  //FinalColor.b=noise_perlin(vUv);
@@ -300,7 +332,8 @@ export default class Water{
   render=()=>{
     this.renderer.render( this.scene, this.camera );
     // console.log("fsdfs")
-    this.material.uniforms.time.value+=0.005;
+    this.material.uniforms.time.value+=Math.random()/100;
+    //console.log(Math.sin(this.material.uniforms.time.value*10));
     // this.material.uniforms.rand.value=Math.floor(Math.random()*10000000);
     requestAnimationFrame( this.render.bind(this) );
   }
