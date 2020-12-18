@@ -332,7 +332,7 @@ export default class Water{
   render=()=>{
     this.renderer.render( this.scene, this.camera );
     // console.log("fsdfs")
-    this.material.uniforms.time.value+=Math.random()/100;
+    this.material.uniforms.time.value+=Math.random()*0.05;
     //console.log(Math.sin(this.material.uniforms.time.value*10));
     // this.material.uniforms.rand.value=Math.floor(Math.random()*10000000);
     requestAnimationFrame( this.render.bind(this) );
