@@ -4,6 +4,7 @@ import HelloWorld from '@/components/HelloWorld'
 import water from "../components/pages/water";
 import water2 from "../components/pages/water2";
 import scan from "../components/pages/scan"
+import line from "../components/pages/line";
 
 Vue.use(Router);
 
@@ -28,6 +29,11 @@ export default new Router({
       path:'/scan',
       name:'scan',
       component:scan
+    },
+    {
+      path:'/line',
+      name:"line",
+      component:line
     }
   ]
 })

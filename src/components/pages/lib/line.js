@@ -2,7 +2,12 @@
 import * as THREE from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
-export default class line {
+import Base3d from "./Base3d";
+export default class Line extends Base3d {
+  constructor(props) {
+    super()
+  }
+
   init(){
     this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
     //相机
@@ -23,8 +28,17 @@ export default class line {
   besaier2(p0,p1,t){
     return Math.pow(1-t,2)*p0+2*t*(1-t)*p1+Math.pow(t)*p2;
   }
-  besaer3(p0,p1,p3,t){
-    Math.pow(1-t,3)*p0+3*t*Math.pow(1-t,2)+3*Math.pow(t)*
+  besaier3(p0,p1,p3,t){
+    Math.pow(1-t,3)*p0+3*p1*Math.pow(1-t,2)+3*p2*Math.pow(t,2)*(1-t)+p3*Math.pow(t,3);
+  }
+  drawLine(points){
+    let lineList=[];
+    for (var i = 0; i <= 1; i+0.1) {
+      let x=this.besaier3(points[0].x,points[1].x,points[2].x);
+      let y=this.besaier3(points[0].y,points[1].y,points[2].y);
+      lineList.push([x,y])
+    }
+    return lineList;
   }
 
 }
