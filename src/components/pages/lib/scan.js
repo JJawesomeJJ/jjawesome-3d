@@ -5,6 +5,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import uv from '../../../assets/images/timg.jpg'
+import {Matrix4} from "three";
 //import {EffectComposer} from 'three/examples/js/postprocessing/EffectComposer'
 
 export default class Scan extends Base3d{
@@ -22,7 +23,7 @@ export default class Scan extends Base3d{
     let controls = new OrbitControls( this.camera, this.renderer.domElement );
     this.geometry = new THREE.BoxGeometry(120, 320, 80);
     this.geometry2 = new THREE.BoxGeometry(100*0.9, 300*0.9, 60*0.9);
-    this.geometry3 = new THREE.BoxGeometry(120*1.05, 320*1.05, 80*1.05);
+    this.geometry3 = new THREE.BoxGeometry(120*1.05, 400*1.05, 400*1.05);
     this.material = new THREE.ShaderMaterial({
       depthWrite: true,
       depthTest: true,
@@ -60,12 +61,12 @@ export default class Scan extends Base3d{
         varying vec3 u_position;
         uniform vec2 u_Resolution;
         varying vec2 v_Resolution;
-        varying vec3 vPos; 
+        varying vec3 vPos;
         varying float v_z;
         uniform mat4 uMVMat;
         uniform mat4 uProjMat;
         varying vec4 w_position;
-      
+
         void main(){
             //vPos = uMVMat * aVertexPos;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
@@ -110,7 +111,7 @@ export default class Scan extends Base3d{
          gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
 
          }
-       
+
         }
       `,
     });
@@ -151,12 +152,12 @@ export default class Scan extends Base3d{
         varying vec3 u_position;
         uniform vec2 u_Resolution;
         varying vec2 v_Resolution;
-        varying vec3 vPos; 
+        varying vec3 vPos;
         varying float v_z;
         uniform mat4 uMVMat;
         uniform mat4 uProjMat;
         varying vec4 w_position;
-      
+
         void main(){
             //vPos = uMVMat * aVertexPos;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
@@ -217,10 +218,15 @@ export default class Scan extends Base3d{
     this.mesh2=new THREE.Mesh(this.geometry2,material3);
     this.mesh2.renderOrder=0.99;
     this.scene.add(this.mesh2);
-    this.mesh.add(new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial()));
+    let mesh=new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial());
+    console.log(mesh,'mesh')
+    this.scene.add(mesh);
     this.scene.add(this.mesh);
   }
   initOutDerLineMaterial(){
+    let modelViewMatrix=new Matrix4();
+    let m_ReverseModelViewMatrix=(new THREE.Matrix3()).getInverse(modelViewMatrix);
+    console.log(m_ReverseModelViewMatrix,"reverse");
     this.OutDerLineMaterial= new THREE.ShaderMaterial({
       depthWrite: true,
       depthTest: true,
@@ -236,8 +242,15 @@ export default class Scan extends Base3d{
             y: window.innerHeight
           }
         },
+        m_ReverseModelViewMatrix:{
+          value:m_ReverseModelViewMatrix
+        },
         u_opacity:{
           type:"f",
+          value:1.0
+        },
+        u_outLine:{
+          type:'f',
           value:1.0
         }
       },
@@ -255,17 +268,21 @@ export default class Scan extends Base3d{
           varying float v_z;
           varying vec4 w_position;
           uniform float u_opacity;
+          uniform float u_outLine;
+          //模型视图矩阵的逆转矩阵
+          uniform mat3 m_ReverseModelViewMatrix;
           void main(){
+              //UNITY_MATRIX_MV 当前模型视图矩阵 ==>modelViewMatrix
               float outline=0.1;
               //vPos = uMVMat * aVertexPos;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-              vec3 newnormal=normalize(vec3(normalMatrix*normal));
-              w_position=modelMatrix*vec4(position,1.0);
-              newnormal.z=-0.5;
-              w_position=w_position+vec4(newnormal,0.0)*outline;
-              v_position=vec3(modelMatrix*a_Position);
-              u_position=v_position;
-              v_Resolution=u_Resolution;
+              // float4 pos = mul (UNITY_MATRIX_MV , position) ;
+              gl_Position =modelViewMatrix * vec4(position,1.0);
+              //mat4 reverModelViewMatrix=modelViewMatrix.setInverseOf(modelViewMatrix);
+              //m_ReverseModelViewMatrix 当前模型矩阵的逆转矩阵
+              vec3 newNormal=vec3(m_ReverseModelViewMatrix*normal);
+              newNormal . z = -0.5 ;
+              gl_Position = gl_Position +  vec4(normalize(newNormal) , 0.0)*u_outLine ;
+              gl_Position=projectionMatrix*gl_Position;
           }
         `,
       fragmentShader: `
@@ -278,7 +295,7 @@ export default class Scan extends Base3d{
                 return x-floor(x/num)*num;
           }
           void main(){
-               gl_FragColor = vec4(1.0,0.0,0.0,1.0);//建筑变红
+               gl_FragColor = vec4(1.0,0.0,0.0,0.4);//建筑变红
           }
         `,
     });
