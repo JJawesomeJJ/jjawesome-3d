@@ -218,19 +218,35 @@ export default class Scan extends Base3d{
     this.mesh2=new THREE.Mesh(this.geometry2,material3);
     this.mesh2.renderOrder=0.99;
     this.scene.add(this.mesh2);
-    let mesh=new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial());
-    console.log(mesh,'mesh')
+    let mesh=new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial(THREE.FrontSide,new THREE.Vector4(1.0,0.0,0.0,0.6)));
+    this.compute(mesh)
+    let mesh1=mesh.clone();
+    mesh1.material=this.initOutDerLineMaterial(THREE.BackSide,new THREE.Vector3(1.0,1.0,1.0,0.6));
+    this.compute(mesh1)
+    this.scene.add(mesh1);
     this.scene.add(mesh);
     this.scene.add(this.mesh);
+    console.log(mesh,'mesh')
   }
-  initOutDerLineMaterial(){
+  compute(mesh){
+    mesh=mesh.clone();
+    let matrix=new THREE.Matrix4();
+    let camera_matrixWorldInverse=this.camera.clone().matrixWorldInverse.invert();
+    let camera_projectionMatrix=this.camera.clone().projectionMatrix.invert();
+    console.log((mesh.matrixWorld.invert()).multiply(camera_matrixWorldInverse).multiply(camera_projectionMatrix),'Matrix======>');
+     //mesh.material.uniforms.m_ReverseModelViewMatrix.value=new THREE.Matrix4().getInverse(new THREE.Matrix4().multiplyMatrices(this.camera.matrixWorldInverse,mesh.matrixWorld));
+    //mesh.material.uniforms.m_ReverseModelViewMatrix.value=(mesh.matrixWorld.invert()).multiply(camera_matrixWorldInverse).multiply(camera_projectionMatrix);
+  }
+  initOutDerLineMaterial(side,color){
     let modelViewMatrix=new Matrix4();
-    let m_ReverseModelViewMatrix=(new THREE.Matrix3()).getInverse(modelViewMatrix);
+    let m_ReverseModelViewMatrix=new THREE.Matrix4().getInverse(modelViewMatrix);
+    console.log(m_ReverseModelViewMatrix);
     console.log(m_ReverseModelViewMatrix,"reverse");
-    this.OutDerLineMaterial= new THREE.ShaderMaterial({
-      depthWrite: true,
-      depthTest: true,
-      transparent: true,
+    return  new THREE.ShaderMaterial({
+      // depthWrite: true,
+      // depthTest: true,
+      // transparent: true,
+      side:side,
       uniforms: {
         u_time: {
           'type': "f",
@@ -251,7 +267,10 @@ export default class Scan extends Base3d{
         },
         u_outLine:{
           type:'f',
-          value:1.0
+          value:3.0
+        },
+        u_color:{
+          value:color
         }
       },
       vertexShader: `
@@ -270,19 +289,17 @@ export default class Scan extends Base3d{
           uniform float u_opacity;
           uniform float u_outLine;
           //模型视图矩阵的逆转矩阵
-          uniform mat3 m_ReverseModelViewMatrix;
+          uniform mat4 m_ReverseModelViewMatrix;
           void main(){
               //UNITY_MATRIX_MV 当前模型视图矩阵 ==>modelViewMatrix
-              float outline=0.1;
               //vPos = uMVMat * aVertexPos;
               // float4 pos = mul (UNITY_MATRIX_MV , position) ;
-              gl_Position =modelViewMatrix * vec4(position,1.0);
-              //mat4 reverModelViewMatrix=modelViewMatrix.setInverseOf(modelViewMatrix);
+              vec4 pos=modelViewMatrix * vec4(position,1.0);
               //m_ReverseModelViewMatrix 当前模型矩阵的逆转矩阵
-              vec3 newNormal=vec3(m_ReverseModelViewMatrix*normal);
-              newNormal . z = -0.5 ;
-              gl_Position = gl_Position +  vec4(normalize(newNormal) , 0.0)*u_outLine ;
-              gl_Position=projectionMatrix*gl_Position;
+              vec4 newNormal=mat4(m_ReverseModelViewMatrix)*vec4(normal,0.0);
+              newNormal.z=-0.8;
+              pos = pos +  normalize(newNormal)*u_outLine;
+              gl_Position=projectionMatrix*pos;
           }
         `,
       fragmentShader: `
@@ -290,16 +307,25 @@ export default class Scan extends Base3d{
           varying vec2 v_Resolution;
           varying vec4 w_position;
           varying vec3 u_position;
+          uniform vec4 u_color;
           uniform float u_opacity;
           float remain(float x,float num){
                 return x-floor(x/num)*num;
           }
           void main(){
-               gl_FragColor = vec4(1.0,0.0,0.0,0.4);//建筑变红
+               gl_FragColor = u_color;//建筑变红
           }
         `,
     });
     return this.OutDerLineMaterial;
+  }
+  Inverse(mesh){
+    // console.log(mesh,"before")
+    // //mesh.matrixWorld=mesh.matrixWorld.getInverse(mesh.matrixWorld)
+    // console.log(mesh,'after')
+    // this.camera.matrixWorld.getInverse(this.camera.matrixWorld);
+    // this.camera.matrixWorldInverse.getInverse(this.camera.matrixWorldInverse);
+    // this.camera.projectionMatrix.getInverse(this.camera.projectionMatrix);
   }
   render=()=>{
     this.renderer.render( this.scene, this.camera );
