@@ -5,6 +5,7 @@ import water from "../components/pages/water";
 import water2 from "../components/pages/water2";
 import scan from "../components/pages/scan"
 import line from "../components/pages/line";
+import outline from "../components/pages/outline";
 
 Vue.use(Router);
 
@@ -34,6 +35,11 @@ export default new Router({
       path:'/line',
       name:"line",
       component:line
+    },
+    {
+      path: '/outline',
+      name:'outline',
+      component: outline
     }
   ]
 })

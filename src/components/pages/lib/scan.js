@@ -6,6 +6,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import uv from '../../../assets/images/timg.jpg'
 import {Matrix4} from "three";
+import OutLineShader from "./shaders/outLineShader";
 //import {EffectComposer} from 'three/examples/js/postprocessing/EffectComposer'
 
 export default class Scan extends Base3d{
@@ -222,6 +223,7 @@ export default class Scan extends Base3d{
     this.compute(mesh)
     let mesh1=mesh.clone();
     mesh1.material=this.initOutDerLineMaterial(THREE.BackSide,new THREE.Vector3(1.0,1.0,1.0,0.6));
+    mesh1.material=new OutLineShader().getShader();
     this.compute(mesh1)
     this.scene.add(mesh1);
     this.scene.add(mesh);
@@ -296,7 +298,7 @@ export default class Scan extends Base3d{
               // float4 pos = mul (UNITY_MATRIX_MV , position) ;
               vec4 pos=modelViewMatrix * vec4(position,1.0);
               //m_ReverseModelViewMatrix 当前模型矩阵的逆转矩阵
-              vec4 newNormal=mat4(m_ReverseModelViewMatrix)*vec4(normal,0.0);
+              vec4 newNormal=vec4(normal,0.0);
               newNormal.z=-0.8;
               pos = pos +  normalize(newNormal)*u_outLine;
               gl_Position=projectionMatrix*pos;
