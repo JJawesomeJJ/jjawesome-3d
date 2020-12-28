@@ -11,7 +11,7 @@ export default class Outline extends Base3d{
     this.shader.uniforms['u_camera'].value=this.camera.position;
     console.log(this.shader)
     console.log(this.camera);
-    this.mesh=new THREE.Mesh(new THREE.BoxGeometry(100,60,40),this.shader);
+    this.mesh=new THREE.Mesh(new THREE.SphereGeometry(50,30,20),this.shader);
     this.scene.add(this.mesh)
   }
   render() {
