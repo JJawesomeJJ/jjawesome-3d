@@ -7,7 +7,10 @@ import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import uv from '../../../assets/images/timg.jpg'
 import {Matrix4} from "three";
 import OutLineShader from "./shaders/outLineShader";
+import BaseComposer from "./composer/BaseComposer";
+import blurPass from "./composer/blurPass";
 //import {EffectComposer} from 'three/examples/js/postprocessing/EffectComposer'
+
 
 export default class Scan extends Base3d{
   constructor(props) {
@@ -225,10 +228,14 @@ export default class Scan extends Base3d{
     mesh1.material=this.initOutDerLineMaterial(THREE.BackSide,new THREE.Vector3(1.0,1.0,1.0,0.6));
     mesh1.material=new OutLineShader().getShader();
     this.compute(mesh1)
-    this.scene.add(mesh1);
-    this.scene.add(mesh);
-    this.scene.add(this.mesh);
+    // this.scene.add(mesh1);
+    // this.scene.add(mesh);
+    // this.scene.add(this.mesh);
     console.log(mesh,'mesh')
+    this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
+    this.blurPass=(new blurPass()).getPass(this.composer.getComposer().renderTarget2.texture);
+    this.composer.addComposer(this.blurPass)
+    this
   }
   compute(mesh){
     mesh=mesh.clone();
@@ -245,9 +252,9 @@ export default class Scan extends Base3d{
     console.log(m_ReverseModelViewMatrix);
     console.log(m_ReverseModelViewMatrix,"reverse");
     return  new THREE.ShaderMaterial({
-      // depthWrite: true,
-      // depthTest: true,
-      // transparent: true,
+      depthWrite: true,
+      depthTest: true,
+      transparent: true,
       side:side,
       uniforms: {
         u_time: {
@@ -331,9 +338,12 @@ export default class Scan extends Base3d{
   }
   render=()=>{
     this.renderer.render( this.scene, this.camera );
-    //this.renderer.sortObjects = false;
-    // console.log("fsdfs")
-    this.material.uniforms.u_time.value+=1.0;
+    // //this.renderer.sortObjects = false;
+    // // console.log("fsdfs")
+    // this.material.uniforms.u_time.value+=1.0;
+    this.composer.getComposer().render();
+    this.renderer.render( this.scene, this.camera );
+    //this.blurPass.uniforms.u_time.value+=0.1;
     //console.log(Math.sin(this.material.uniforms.time.value*10));
     // this.material.uniforms.rand.value=Math.floor(Math.random()*10000000);
     requestAnimationFrame( this.render.bind(this) );
