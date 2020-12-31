@@ -19,16 +19,17 @@ export default class blurPss extends BaseShaderPass{
                             varying vec2 vUv;
                             void main() {
                                 vUv = uv;
-                                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                                vec4 position2=vec4( position, 1.0 );
+                                gl_Position = projectionMatrix * modelViewMatrix * position2;
                             }
                         `,
       fragmentShader: `
                             uniform sampler2D Texture;
                             varying vec2 vUv;
                             uniform float u_time;
-                            float move=0.01;
+                            float move=0.002;
                             vec4 getColor(){
-                                 move=abs(sin(u_time))*0.005;
+                                 //move=abs(sin(u_time))*0.005;
                                  vec4 color=texture2D(Texture,vec2(vUv.x,vUv.y));
                                  color+=texture2D(Texture,vec2(vUv.x+move,vUv.y));
                                  color+=texture2D(Texture,vec2(vUv.x-move,vUv.y));

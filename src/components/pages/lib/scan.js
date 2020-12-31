@@ -73,7 +73,19 @@ export default class Scan extends Base3d{
 
         void main(){
             //vPos = uMVMat * aVertexPos;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+             vec4 position2=vec4(position,1.0);
+             //position2.x=cos(3.14/2.0)*position2.x;
+             // position2.z+=sin(3.14/2.0)*position2.z;
+             float x=position2.x;
+             float y=position2.y;
+             float z=position2.y;
+             float r=sqrt(pow(x,2.0)+pow(y,2.0)+pow(z,2.0));
+             //position2.y+=sqrt(pow())
+             // position2.z+=sin(3.14/2.0)*position2.z;
+             //position2.x=x-r*cos(3.14/-4.0);
+             position2.y=y+r*sin(3.14/-4.0);
+             //position2.z=z+r*sin(3.14/4.0);
+            gl_Position = projectionMatrix * modelViewMatrix * position2;
             w_position=modelViewMatrix*modelMatrix * vec4(position,1.0);
             v_position=vec3(modelMatrix*a_Position);
             v_z=gl_Position.z;
@@ -104,17 +116,18 @@ export default class Scan extends Base3d{
         time=pow(u_time,1.2);
         float space=2.0;
         float line_space=0.5;
-         if(w_position.y+110.0>=time&&w_position.y+80.0<=time){
-             if(remain(w_position.y,space)<=line_space||remain(w_position.x,space)<=line_space){
-                gl_FragColor = vec4(0.8,0.0,0.0,1.0);
-                }else{
-                gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
-                }
-                }
-         else{
+         // if(w_position.y+110.0>=time&&w_position.y+80.0<=time){
+         //     if(remain(w_position.y,space)<=line_space||remain(w_position.x,space)<=line_space){
+         //        gl_FragColor = vec4(0.8,0.0,0.0,1.0);
+         //        }else{
+         //        gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
+         //        }
+         //        }
+         // else{
+         // gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
+         //
+         // }
          gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
-
-         }
 
         }
       `,
@@ -217,21 +230,22 @@ export default class Scan extends Base3d{
     var texture=textureLoder.load(uv);
     var material3 = new THREE.MeshBasicMaterial( { map: texture } );
     this.mesh=new THREE.Mesh(this.geometry,this.material);
-    this.mesh.renderOrder=1;
-
-    this.mesh2=new THREE.Mesh(this.geometry2,material3);
-    this.mesh2.renderOrder=0.99;
-    this.scene.add(this.mesh2);
-    let mesh=new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial(THREE.FrontSide,new THREE.Vector4(1.0,0.0,0.0,0.6)));
-    this.compute(mesh)
-    let mesh1=mesh.clone();
-    mesh1.material=this.initOutDerLineMaterial(THREE.BackSide,new THREE.Vector3(1.0,1.0,1.0,0.6));
-    mesh1.material=new OutLineShader().getShader();
-    this.compute(mesh1)
+    this.scene.add(this.mesh)
+    // this.mesh.renderOrder=1;
+    //
+    // this.mesh2=new THREE.Mesh(this.geometry2,material3);
+    // this.mesh2.renderOrder=0.99;
+    // this.scene.add(this.mesh2);
+    // let mesh=new THREE.Mesh(this.geometry3,this.initOutDerLineMaterial(THREE.FrontSide,new THREE.Vector4(1.0,0.0,0.0,0.6)));
+    // this.compute(mesh)
+    // let mesh1=mesh.clone();
+    // mesh1.material=this.initOutDerLineMaterial(THREE.BackSide,new THREE.Vector3(1.0,1.0,1.0,0.6));
+    // mesh1.material=new OutLineShader().getShader();
+    // this.compute(mesh1)
     // this.scene.add(mesh1);
     // this.scene.add(mesh);
     // this.scene.add(this.mesh);
-    console.log(mesh,'mesh')
+    // console.log(mesh,'mesh')
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     this.blurPass=(new blurPass()).getPass(this.composer.getComposer().renderTarget2.texture);
     this.composer.addComposer(this.blurPass)
