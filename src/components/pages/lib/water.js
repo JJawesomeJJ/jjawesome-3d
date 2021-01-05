@@ -30,6 +30,7 @@ export default class Water{
     let texture=this.loadTexture();
     var textureLoader = new THREE.TextureLoader();
     var water_png=textureLoader.load(water_png);
+    console.log(water_png,"water_png");
     water_png.wrapS = water_png.wrapT = THREE.RepeatWrapping;
     this.material = new THREE.ShaderMaterial({
       map: texture[0],// 普通纹理贴图

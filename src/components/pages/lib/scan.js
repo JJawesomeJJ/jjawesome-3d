@@ -116,18 +116,17 @@ export default class Scan extends Base3d{
         time=pow(u_time,1.2);
         float space=2.0;
         float line_space=0.5;
-         // if(w_position.y+110.0>=time&&w_position.y+80.0<=time){
-         //     if(remain(w_position.y,space)<=line_space||remain(w_position.x,space)<=line_space){
-         //        gl_FragColor = vec4(0.8,0.0,0.0,1.0);
-         //        }else{
-         //        gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
-         //        }
-         //        }
-         // else{
-         // gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
-         //
-         // }
+         if(w_position.y+110.0>=time&&w_position.y+80.0<=time){
+             if(remain(w_position.y,space)<=line_space||remain(w_position.x,space)<=line_space){
+                gl_FragColor = vec4(0.8,0.0,0.0,1.0);
+                }else{
+                gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
+                }
+                }
+         else{
          gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
+         }
+         //gl_FragColor = vec4(28.0/225.0,88.0/225.0,107.0/225.0,0.6);
 
         }
       `,
@@ -249,7 +248,6 @@ export default class Scan extends Base3d{
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     this.blurPass=(new blurPass()).getPass(this.composer.getComposer().renderTarget2.texture);
     this.composer.addComposer(this.blurPass)
-    this
   }
   compute(mesh){
     mesh=mesh.clone();
@@ -354,7 +352,7 @@ export default class Scan extends Base3d{
     this.renderer.render( this.scene, this.camera );
     // //this.renderer.sortObjects = false;
     // // console.log("fsdfs")
-    // this.material.uniforms.u_time.value+=1.0;
+    this.material.uniforms.u_time.value+=1.0;
     this.composer.getComposer().render();
     this.renderer.render( this.scene, this.camera );
     //this.blurPass.uniforms.u_time.value+=0.1;

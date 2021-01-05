@@ -19,7 +19,7 @@ export default class BaseComposer{
   getComposer(){
     return this.composer;
   }
-  addComposer(pass){
+  addPass(pass){
     this.composer.addPass(pass)
   }
 }
