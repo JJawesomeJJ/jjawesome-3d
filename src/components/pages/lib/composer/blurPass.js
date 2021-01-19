@@ -9,25 +9,41 @@ export default class blurPss extends BaseShaderPass{
   getPass(texture) {
     return new ShaderPass(new THREE.ShaderMaterial({
       uniforms: {
-        Texture: { value: texture },
+        Texture: { value: texture[0] },
         u_time:{
           value:1.0,
           type:"f"
+        },
+        u_height_texture:{
+          value:texture[1]
         }
       },
+
+
       vertexShader: `
                             varying vec2 vUv;
+                            varying float blur_size;
                             void main() {
                                 vUv = uv;
                                 vec4 position2=vec4( position, 1.0 );
                                 gl_Position = projectionMatrix * modelViewMatrix * position2;
+                                blur_size=normalize(position2).z;
+                                
                             }
                         `,
       fragmentShader: `
                             uniform sampler2D Texture;
                             varying vec2 vUv;
                             uniform float u_time;
+                            uniform sampler2D u_height_texture;
                             float move=0.01;
+                            varying float blur_size;
+                            float readHeight(){
+                                  float fragCoordZ = texture2D( u_height_texture, vUv ).x;
+                                  // float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
+                                  // return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
+                                  return fragCoordZ;
+                            }
                             vec4 getColor(){
                                  move+=abs(sin(vUv.x*vUv.y)*0.002);
                                  vec4 color=texture2D(Texture,vec2(vUv.x,vUv.y));
@@ -75,7 +91,7 @@ export default class blurPss extends BaseShaderPass{
                                   return max;
                             }
                             vec4 getColor3(float radius,float reduce){
-                                radius+=abs(sin(u_time))*radius;
+                                radius+=abs(sin(u_time))*radius+(100.0*readHeight());
                                 vec4 color=vec4(0.0,0.0,0.0,0.0);
                                 vec4 real_color=texture2D(Texture,vec2(vUv.x,vUv.y));
                                 float all_long=0.0;
@@ -105,7 +121,8 @@ export default class blurPss extends BaseShaderPass{
                                 return color;
                             }
                             void main() {
-                                gl_FragColor=getColor3(0.02,0.003);
+                                  //gl_FragColor=vec4(1.0,0.0,0.0,0.8);
+                                gl_FragColor=getColor3(0.01,0.002);
                                // gl_FragColor = getColor();
                             }
                         `,

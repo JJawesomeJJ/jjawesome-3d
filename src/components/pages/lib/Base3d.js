@@ -14,6 +14,7 @@ export default class Base3d {
     document.body.appendChild( this.renderer.domElement );
     this.camera.position.z = 300;
     let controls = new OrbitControls( this.camera, this.renderer.domElement );
+    window.controls=controls;
   }
   render(){
     this.renderer.render( this.scene, this.camera );
