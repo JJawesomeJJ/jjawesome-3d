@@ -20,40 +20,40 @@ export default class beisaierLine extends Base3d{
    * @param radius
    * @param pointNum
    */
-  computePoint(startPoint,endPoint,heightPoint,radius=5.0,pointNum=100){
-    let width=0.01;
+  computePoint(startPoint,endPoint,heightPoint,radius=5.0,pointNum=200){
+    let width=1/pointNum;
     var point=[];
+    var uv=[];
     let index=0;
     for(var i=0.0;i<=1;i+=width){
-      // i=i.toFixed(2)
       console.log(i)
       let point1 = this.getPoint(startPoint,endPoint,heightPoint,i);
+      this.pushUv(uv,i)
       let point2= [point1[0],point1[1],point1[2]+radius];
+      this.pushUv(uv,i)
       i+=width
       let point3=this.getPoint(startPoint,endPoint,heightPoint,i);
+      this.pushUv(uv,i)
       i-=width
       this.push(point,point1)
       this.push(point,point2)
       this.push(point,point3)
       i+=width;
-
       let point4=this.getPoint(startPoint,endPoint,heightPoint,i);
+      this.pushUv(uv,i)
       let point5=[point4[0],point4[1],point4[2]+radius]
+      this.pushUv(uv,i-width)
       this.push(point,point4);
       this.push(point,point5);
       this.push(point,point2);
+      this.pushUv(uv,i)
       i-=width;
     }
-    console.log(point,"point====>")
-    var ele=[];
-    // ele=this.push(ele,[startPoint.x,startPoint.y,startPoint.z]);
-    // ele=this.push(ele,[endPoint.x,endPoint.y,endPoint.z]);
-    // ele=this.push(ele,[heightPoint.x,heightPoint.y,heightPoint.z]);
-    console.log(ele);
-    return new Float32Array(point);
+    return [new Float32Array(point),new Float32Array(uv)];
   }
-  getNextPoint(startPoint,endPoint,heightPoint){
-
+  pushUv(uvBuff,i){
+    uvBuff.push(i)
+    uvBuff.push(i)
   }
   getPoint(startPoint,endPoint,heightPoint,i){
     return [
@@ -71,11 +71,12 @@ export default class beisaierLine extends Base3d{
   init(){
     super.init();
     let bufferGeotry=new THREE.BufferGeometry();
-    let buff=this.computePoint({x:0.0,y:0.0,z:50.0},{x:400.0,y:0.0,z:80},{x:300.0,y:500,z:71.0})
-    console.log(buff);
-    bufferGeotry.setAttribute("position",new BufferAttribute(buff,3))
+    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0})
+    bufferGeotry.setAttribute("position",new BufferAttribute(buff[0],3));
+    bufferGeotry.setAttribute("uv",new BufferAttribute(buff[1],2))
+    console.log(bufferGeotry)
     let plane=new THREE.BoxGeometry(300,10,10,20,40);
-    this.scene.add(new THREE.Mesh(bufferGeotry,new THREE.MeshBasicMaterial({color:0x2664FC,side:THREE.DoubleSide})))
+    // this.scene.add(new THREE.Mesh(bufferGeotry,new THREE.MeshBasicMaterial({color:0x2664FC,side:THREE.DoubleSide})))
     this.shader=new THREE.ShaderMaterial({
       side:THREE.DoubleSide,
       uniforms: {
@@ -116,15 +117,17 @@ export default class beisaierLine extends Base3d{
               return ceil(isBigerThanZero(uVu.x-(x-lineRadius))*isBigerThanZero((x-uVu.x))*(isBigerThanZero(uVu.y-(y-lineRadius)))*isBigerThanZero(y-uVu.y));
         }
         void main(){
-          float beisaierNum=beisaier(vec2(0.0,0.0),vec2(1.0,0.0),vec2(0.4,0.8),sin(u_time),0.02);
-          if(beisaierNum>0.0){
-           gl_FragColor = vec4(1.0,0.2,0.5,1.0)*beisaierNum;
-          }else{
-          gl_FragColor = vec4(1.0,1.0,1.0,0.0);
-          }
+          // float beisaierNum=beisaier(vec2(0.0,0.0),vec2(1.0,0.0),vec2(0.4,0.8),sin(u_time),0.02);
+          // if(beisaierNum>0.0){
+          //  gl_FragColor = vec4(1.0,0.2,0.5,1.0)*beisaierNum;
+          // }else{
+          // gl_FragColor = vec4(1.0,1.0,1.0,0.0);
+          // }
+           gl_FragColor = vec4(18.0/255.0,183.0/255.0,255.0/255.0,1.0)*step((uVu.x-sin(u_time)),0.0);
         }
       `,
     })
+    this.scene.add(new THREE.Mesh(bufferGeotry,this.shader))
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     //this.composer.addPass(new blurPass().getPass(this.composer.getComposer().renderTarget2.texture))
     this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture))
@@ -137,7 +140,7 @@ export default class beisaierLine extends Base3d{
   render() {
     //super.render();
     this.composer.getComposer().render();
-    this.shader.uniforms.u_time.value+=0.05;
+    this.shader.uniforms.u_time.value+=0.03;
     requestAnimationFrame( this.render.bind(this));
   }
 }
