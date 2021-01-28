@@ -7,6 +7,7 @@ import blurPass from "./composer/blurPass";
 import FlowLightPass from "./composer/FlowLightPass";
 import outLinePass from "./composer/outLinePass";
 import activeShaderPass from "./composer/activeShaderPass";
+import star from '../../../assets/images/star.png'
 export default class beisaierLine extends Base3d{
   constructor(props) {
     super();
@@ -20,7 +21,7 @@ export default class beisaierLine extends Base3d{
    * @param radius
    * @param pointNum
    */
-  computePoint(startPoint,endPoint,heightPoint,radius=5.0,pointNum=200){
+  computePoint(startPoint,endPoint,heightPoint,radius=5.0,pointNum=30){
     let width=1/pointNum;
     var point=[];
     var uv=[];
@@ -28,32 +29,32 @@ export default class beisaierLine extends Base3d{
     for(var i=0.0;i<=1;i+=width){
       console.log(i)
       let point1 = this.getPoint(startPoint,endPoint,heightPoint,i);
-      this.pushUv(uv,i)
+      this.pushUv(uv,i,0)
       let point2= [point1[0],point1[1],point1[2]+radius];
-      this.pushUv(uv,i)
+      this.pushUv(uv,i,1)
       i+=width
       let point3=this.getPoint(startPoint,endPoint,heightPoint,i);
-      this.pushUv(uv,i)
+      this.pushUv(uv,i,0)
       i-=width
       this.push(point,point1)
       this.push(point,point2)
       this.push(point,point3)
       i+=width;
       let point4=this.getPoint(startPoint,endPoint,heightPoint,i);
-      this.pushUv(uv,i)
+      this.pushUv(uv,i,0)
       let point5=[point4[0],point4[1],point4[2]+radius]
-      this.pushUv(uv,i-width)
+      this.pushUv(uv,i-width,1)
       this.push(point,point4);
       this.push(point,point5);
       this.push(point,point2);
-      this.pushUv(uv,i)
+      this.pushUv(uv,i,0)
       i-=width;
     }
     return [new Float32Array(point),new Float32Array(uv)];
   }
-  pushUv(uvBuff,i){
+  pushUv(uvBuff,i,y){
     uvBuff.push(i)
-    uvBuff.push(i)
+    uvBuff.push(y)
   }
   getPoint(startPoint,endPoint,heightPoint,i){
     return [
@@ -71,12 +72,14 @@ export default class beisaierLine extends Base3d{
   init(){
     super.init();
     let bufferGeotry=new THREE.BufferGeometry();
-    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0})
+    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},50)
     bufferGeotry.setAttribute("position",new BufferAttribute(buff[0],3));
     bufferGeotry.setAttribute("uv",new BufferAttribute(buff[1],2))
     console.log(bufferGeotry)
     let plane=new THREE.BoxGeometry(300,10,10,20,40);
     // this.scene.add(new THREE.Mesh(bufferGeotry,new THREE.MeshBasicMaterial({color:0x2664FC,side:THREE.DoubleSide})))
+    var textureLoader = new THREE.TextureLoader();
+    let texture=textureLoader.load(star);
     this.shader=new THREE.ShaderMaterial({
       side:THREE.DoubleSide,
       uniforms: {
@@ -88,6 +91,9 @@ export default class beisaierLine extends Base3d{
         },
         u_time:{
           value:0.0,
+        },
+        uTexture:{
+          value:texture
         }
       },
       vertexShader: `
@@ -103,6 +109,7 @@ export default class beisaierLine extends Base3d{
         uniform vec4 u_color;
         varying vec2 uVu;
         uniform float u_time;
+        uniform sampler2D uTexture;
         float remain(float x,float num){
             return x-floor(x/num)*num;
         }
@@ -117,13 +124,15 @@ export default class beisaierLine extends Base3d{
               return ceil(isBigerThanZero(uVu.x-(x-lineRadius))*isBigerThanZero((x-uVu.x))*(isBigerThanZero(uVu.y-(y-lineRadius)))*isBigerThanZero(y-uVu.y));
         }
         void main(){
+          vec4 color=texture2D(uTexture,uVu);
           // float beisaierNum=beisaier(vec2(0.0,0.0),vec2(1.0,0.0),vec2(0.4,0.8),sin(u_time),0.02);
           // if(beisaierNum>0.0){
           //  gl_FragColor = vec4(1.0,0.2,0.5,1.0)*beisaierNum;
           // }else{
           // gl_FragColor = vec4(1.0,1.0,1.0,0.0);
           // }
-           gl_FragColor = vec4(18.0/255.0,183.0/255.0,255.0/255.0,1.0)*step((uVu.x-sin(u_time)),0.0);
+           //gl_FragColor = color*step((uVu.x-sin(u_time)),0.0);
+           gl_FragColor = color;
         }
       `,
     })

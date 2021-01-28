@@ -110,7 +110,7 @@ export default class Water{
         void main(){
             v_time=time;
             vUv = uv;
-            
+
             float x = position.x;
             //vUv.xy += noise(uv)*(sin(v_time*6.0)*0.1);
             v_Normal=a_Normal;
@@ -175,7 +175,7 @@ export default class Water{
                 float dBy = texture2D( uNormalMap, v_TexCoord + dSTdy ).x - Hll;
                 return vec2( dBx, dBy );
          }
-         
+
          vec2 random(vec2 p){
             return  -1.0 + 2.0 * fract(
                 sin(
