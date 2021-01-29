@@ -5,6 +5,7 @@ import App from './App'
 import router from './router';
 
 import * as THREE from 'three'
+import config from "./config/config";
 
 
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'

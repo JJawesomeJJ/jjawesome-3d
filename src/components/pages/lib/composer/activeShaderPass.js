@@ -6,13 +6,16 @@ export default class activeShaderPass extends BaseShaderPass{
   constructor(){
     super();
   }
-  getPass(texture) {
+  getPass(texture,baseTexture) {
     return new ShaderPass(new THREE.ShaderMaterial({
       uniforms: {
         Texture: { value: texture },
         u_time:{
           value:1.0,
           type:"f"
+        },
+        uBaseTexture:{
+          value:baseTexture
         }
       },
       vertexShader: `
@@ -28,8 +31,9 @@ export default class activeShaderPass extends BaseShaderPass{
                             varying vec2 vUv;
                             uniform float u_time;
                             float move=0.01;
+                            uniform sampler2D uBaseTexture;
                             vec4 getColor(){
-                                 move+=abs(sin(vUv.x*vUv.y)*0.002);
+                                 move+=abs(sin(u_time)*0.002);
                                  vec4 color=texture2D(Texture,vec2(vUv.x,vUv.y));
                                  float whiteColor=ceil((color.x+color.y+color.z)*(color.x+color.y+color.z));
                                  // if(color.xyz!=vec3(0.0,0.0,0.0)){
@@ -104,10 +108,10 @@ export default class activeShaderPass extends BaseShaderPass{
                                         color+=texture2D(Texture,vec2(x,y))*(distance(vec2(vUv.x,vUv.y),vec2(x,y))/all_long);
                                     }
                                 }
-                                return color+color*whiteColor;
+                                return color*ceil(1.0-whiteColor)+real_color*whiteColor*8.0+texture2D(uBaseTexture,vec2(vUv.x,vUv.y));
                             }
                             void main() {
-                                gl_FragColor=getColor3(0.002,0.001);
+                                gl_FragColor=getColor3(0.006,0.002);
                                // gl_FragColor = getColor();
                             }
                         `,

@@ -28,7 +28,7 @@ export default class blurPss extends BaseShaderPass{
                                 vec4 position2=vec4( position, 1.0 );
                                 gl_Position = projectionMatrix * modelViewMatrix * position2;
                                 blur_size=normalize(position2).z;
-                                
+
                             }
                         `,
       fragmentShader: `
@@ -122,7 +122,7 @@ export default class blurPss extends BaseShaderPass{
                             }
                             void main() {
                                   //gl_FragColor=vec4(1.0,0.0,0.0,0.8);
-                                gl_FragColor=getColor3(0.01,0.002);
+                                gl_FragColor=getColor3(0.0005,0.0002);
                                // gl_FragColor = getColor();
                             }
                         `,
