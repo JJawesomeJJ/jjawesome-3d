@@ -4,10 +4,11 @@
 
 <script>
 import weilan from "./lib/weilan";
+import weilan2 from "./lib/weilan2";
 export default {
 name: "weilan",
   mounted() {
-    (new weilan()).render();
+    (new weilan2()).render();
   }
 }
 </script>

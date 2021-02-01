@@ -12,6 +12,7 @@ import outlineColorPass from "./composer/outLineColorPass";
 import blurPss from "./composer/blurPass";
 import night from '../../../assets/images/night.png'
 
+import MathUtil from "../../../utils/MathUtil";
 export default class weilan extends Base3d{
   init() {
     super.init();
@@ -94,7 +95,7 @@ export default class weilan extends Base3d{
       // return
       // let mesh=new THREE.Mesh(obj,new THREE.MeshBasicMaterial({color:"0xFFFFF"}));
       console.log(obj);
-      obj.children[0].material=new THREE.MeshBasicMaterial({color:0x0B8AF5,side:THREE.DoubleSide});
+      obj.children[0].material=new THREE.MeshBasicMaterial({color:0x0D559E,side:THREE.DoubleSide});
       this.scene.add(obj)
       obj.position.setX(obj.position.x+150)
       obj.position.setY(obj.position.y+50)
@@ -104,21 +105,23 @@ export default class weilan extends Base3d{
     });
     let textureLoader=new TextureLoader()
     let scene=new THREE.Scene();
-    let geo=new PlaneGeometry(window.innerWidth/6,window.innerHeight/6,20);
+    let geo=new PlaneGeometry(window.innerWidth/2,window.innerHeight/2,20);
     // this.scene.add()
     scene.add(new Mesh(geo,new MeshBasicMaterial({map:textureLoader.load(night)})))
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     this.composer2=new BaseComposer(scene,this.camera,this.renderer)
-    this.shaderPass=new activeShaderPass().getPass(this.composer.getComposer().renderTarget1.texture,this.composer2.getComposer().renderTarget1.texture);
-    this.composer.addPass(this.shaderPass)
-
+    this.shaderPass=new activeShaderPass(0.01,0.001);
+    this.shaderPass.setRadius(0.05)
+    this.shaderPass.setReduce(0.005)
+    this.composer.addPass(this.shaderPass.getPass(this.composer.getComposer().renderTarget2.texture,this.composer2.getComposer().renderTarget2.texture))
   }
   render() {
     //this.composer2.getComposer();
     this.composer2.getComposer().render();
     this.composer.getComposer().render() ;
     requestAnimationFrame( this.render.bind(this) );
-    this.shaderPass.uniforms.u_time.value+=0.05;
-    this.shaderMaterial.uniforms.u_time.value+=0.05;
+    this.shaderPass.shader.uniforms.u_time.value+=0.01;
+    this.shaderPass.setRadius(this.shaderPass.radius*Math.abs(Math.sin(this.shaderPass.shader.uniforms.u_time.value)),false)
+    //this.shaderMaterial.uniforms.u_time.value+=0.05;
   }
 }
