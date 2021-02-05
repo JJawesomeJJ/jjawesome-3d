@@ -96,7 +96,7 @@ export default class beisaierLine extends Base3d{
           value:texture
         },
         uFirstColor:{
-          value:new THREE.Color(0X10E6F5)
+          value:new THREE.Color(0xEC13AB)
         },
         uSecondColor:{
           value:new THREE.Color(0x1091F5)
