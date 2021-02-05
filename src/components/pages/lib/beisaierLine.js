@@ -43,11 +43,11 @@ export default class beisaierLine extends Base3d{
       let point4=this.getPoint(startPoint,endPoint,heightPoint,i);
       this.pushUv(uv,i,0)
       let point5=[point4[0],point4[1],point4[2]+radius]
-      this.pushUv(uv,i-width,1)
+      this.pushUv(uv,i,1)
       this.push(point,point4);
       this.push(point,point5);
       this.push(point,point2);
-      this.pushUv(uv,i,0)
+      this.pushUv(uv,i-width,0)
       i-=width;
     }
     return [new Float32Array(point),new Float32Array(uv)];
@@ -72,7 +72,7 @@ export default class beisaierLine extends Base3d{
   init(){
     super.init();
     let bufferGeotry=new THREE.BufferGeometry();
-    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},50)
+    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},5)
     bufferGeotry.setAttribute("position",new BufferAttribute(buff[0],3));
     bufferGeotry.setAttribute("uv",new BufferAttribute(buff[1],2))
     console.log(bufferGeotry)
@@ -94,6 +94,15 @@ export default class beisaierLine extends Base3d{
         },
         uTexture:{
           value:texture
+        },
+        uFirstColor:{
+          value:new THREE.Color(0X10E6F5)
+        },
+        uSecondColor:{
+          value:new THREE.Color(0x1091F5)
+        },
+        uThirdColor:{
+          value:new THREE.Color(0x5C10F5)
         }
       },
       vertexShader: `
@@ -110,6 +119,9 @@ export default class beisaierLine extends Base3d{
         varying vec2 uVu;
         uniform float u_time;
         uniform sampler2D uTexture;
+        uniform vec3 uFirstColor;
+        uniform vec3 uSecondColor;
+        uniform vec3 uThirdColor;
         float remain(float x,float num){
             return x-floor(x/num)*num;
         }
@@ -123,6 +135,9 @@ export default class beisaierLine extends Base3d{
               float y=pow(1.0-time,2.0)*startPoint.y+2.0*time*(1.0-time)*heightPoint.y+pow(time,2.0)*endPoint.y;
               return ceil(isBigerThanZero(uVu.x-(x-lineRadius))*isBigerThanZero((x-uVu.x))*(isBigerThanZero(uVu.y-(y-lineRadius)))*isBigerThanZero(y-uVu.y));
         }
+        vec4 getColor(){
+             (uVu.x/3.0)*10.0
+        }
         void main(){
           vec4 color=texture2D(uTexture,uVu);
           // float beisaierNum=beisaier(vec2(0.0,0.0),vec2(1.0,0.0),vec2(0.4,0.8),sin(u_time),0.02);
@@ -131,15 +146,15 @@ export default class beisaierLine extends Base3d{
           // }else{
           // gl_FragColor = vec4(1.0,1.0,1.0,0.0);
           // }
-           //gl_FragColor = color*step((uVu.x-sin(u_time)),0.0);
-           gl_FragColor = color;
+           gl_FragColor = vec4(0.2,0.4,0.6,1.0)*step((uVu.x-sin(u_time)),0.0);
+           //gl_FragColor = color;
         }
       `,
     })
     this.scene.add(new THREE.Mesh(bufferGeotry,this.shader))
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
-    //this.composer.addPass(new blurPass().getPass(this.composer.getComposer().renderTarget2.texture))
-    this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture))
+    this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
+    //this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture,null))
     // this.scene.add(new THREE.Mesh(plane,new THREE.MeshBasicMaterial({
     //   color:new THREE.Color(0xfffff),
     //   side:THREE.DoubleSide
@@ -147,9 +162,9 @@ export default class beisaierLine extends Base3d{
     //this.scene.add(new THREE.Mesh(plane,this.shader))
   }
   render() {
-    //super.render();
+  //   //super.render();
     this.composer.getComposer().render();
-    this.shader.uniforms.u_time.value+=0.03;
+    this.shader.uniforms.u_time.value+=0.01;
     requestAnimationFrame( this.render.bind(this));
   }
 }

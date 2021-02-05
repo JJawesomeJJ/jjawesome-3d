@@ -111,8 +111,8 @@ export default class weilan extends Base3d{
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     this.composer2=new BaseComposer(scene,this.camera,this.renderer)
     this.shaderPass=new activeShaderPass(0.01,0.001);
-    this.shaderPass.setRadius(0.05)
-    this.shaderPass.setReduce(0.005)
+    this.shaderPass.setRadius(0.009)
+    this.shaderPass.setReduce(0.001)
     this.composer.addPass(this.shaderPass.getPass(this.composer.getComposer().renderTarget2.texture,this.composer2.getComposer().renderTarget2.texture))
   }
   render() {

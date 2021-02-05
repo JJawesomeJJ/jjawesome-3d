@@ -8,7 +8,7 @@ import weilan2 from "./lib/weilan2";
 export default {
 name: "weilan",
   mounted() {
-    (new weilan2()).render();
+    (new weilan()).render();
   }
 }
 </script>

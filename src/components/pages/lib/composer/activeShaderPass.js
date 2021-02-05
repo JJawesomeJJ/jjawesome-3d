@@ -125,14 +125,17 @@ export default class activeShaderPass extends BaseShaderPass{
                                 vec4 real_color=texture2D(Texture,vec2(vUv.x,vUv.y));
                                 float whiteColor=ceil(real_color.x/10.0+real_color.y/10.0+real_color.z/10.0);
                                 int index=0;
+                                float num=0.0;
                                 for(float x=vUv.x-radius;x<vUv.x+radius;x+=reduce){
                                     for(float y=vUv.y-radius;y<vUv.y+radius;y+=reduce){
                                         //vec4 otherColor=texture2D(Texture,vec2(x,y))*(1.0-distance(vec2(vUv.x,vUv.y),vec2(x,y))/all_long);
-                                        vec4 otherColor=texture2D(Texture,vec2(x,y))*u_weight[index];
+                                        vec4 otherColor=texture2D(Texture,vec2(x,y));
                                         color+=otherColor;
                                         index+=1;
+                                        num+=1.0;
                                     }
                                 }
+                               color/=num;
                                 //return color+texture2D(uBaseTexture,vec2(vUv.x,vUv.y))+real_color*whiteColor*6.0*pow(inner/max_num,2.0)/60.0;
                                  return whiteColor*real_color+abs(ceil(1.0-whiteColor))*color+texture2D(uBaseTexture,vec2(vUv.x,vUv.y))+whiteColor*vec4(1.0,1.0,1.0,1.0)*sinValue;
                                  return color;
