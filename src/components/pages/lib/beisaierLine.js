@@ -135,8 +135,13 @@ export default class beisaierLine extends Base3d{
               float y=pow(1.0-time,2.0)*startPoint.y+2.0*time*(1.0-time)*heightPoint.y+pow(time,2.0)*endPoint.y;
               return ceil(isBigerThanZero(uVu.x-(x-lineRadius))*isBigerThanZero((x-uVu.x))*(isBigerThanZero(uVu.y-(y-lineRadius)))*isBigerThanZero(y-uVu.y));
         }
+
         vec4 getColor(){
-             (uVu.x/3.0)*10.0
+             float num=remain(uVu.x,0.03);
+             vec3 color1=uFirstColor*step(0.01,num);
+             vec3 color2=uSecondColor*step(0.02,num);
+             vec3 color3=uThirdColor*(1.0-ceil(step(0.01,num)));
+             return vec4(color1+color2+color3,1.0);
         }
         void main(){
           vec4 color=texture2D(uTexture,uVu);
@@ -146,7 +151,7 @@ export default class beisaierLine extends Base3d{
           // }else{
           // gl_FragColor = vec4(1.0,1.0,1.0,0.0);
           // }
-           gl_FragColor = vec4(0.2,0.4,0.6,1.0)*step((uVu.x-sin(u_time)),0.0);
+           gl_FragColor = getColor()*step((uVu.x-sin(u_time)),0.0);
            //gl_FragColor = color;
         }
       `,
