@@ -235,6 +235,7 @@ export default class beisaierLine extends Base3d{
              vec3 color2=uSecondColor*step(0.02,num);
              vec3 color3=uThirdColor*(1.0-ceil(step(0.01,num)));
              vec3 middleColor=uMiddleColor*step(0.45,uVu.y)*(1.0-step(0.55,uVu.y));
+             middleColor+=vec3(1.0,1.0,1.0)*0.6*hasColor(middleColor);
              return vec4(middleColor+getAngleColor(0.1+u_time)+getAngleColor(0.4+u_time)+getAngleColor(0.8+u_time),1.0);
         }
         vec4 moreLightColor(float start_x,float length){
