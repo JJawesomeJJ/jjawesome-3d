@@ -8,6 +8,7 @@ import FlowLightPass from "./composer/FlowLightPass";
 import outLinePass from "./composer/outLinePass";
 import activeShaderPass from "./composer/activeShaderPass";
 import star from '../../../assets/images/star.png'
+import fog from '../../../assets/images/fog.png'
 export default class beisaierLine extends Base3d{
   constructor(props) {
     super();
@@ -47,7 +48,7 @@ export default class beisaierLine extends Base3d{
       this.push(point,point4);
       this.push(point,point5);
       this.push(point,point2);
-      this.pushUv(uv,i-width,0)
+      this.pushUv(uv,i-width,1)
       i-=width;
     }
     return [new Float32Array(point),new Float32Array(uv)];
@@ -72,7 +73,7 @@ export default class beisaierLine extends Base3d{
   init(){
     super.init();
     let bufferGeotry=new THREE.BufferGeometry();
-    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},5)
+    let buff=this.computePoint({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},10)
     bufferGeotry.setAttribute("position",new BufferAttribute(buff[0],3));
     bufferGeotry.setAttribute("uv",new BufferAttribute(buff[1],2))
     console.log(bufferGeotry)
@@ -80,10 +81,18 @@ export default class beisaierLine extends Base3d{
     // this.scene.add(new THREE.Mesh(bufferGeotry,new THREE.MeshBasicMaterial({color:0x2664FC,side:THREE.DoubleSide})))
     var textureLoader = new THREE.TextureLoader();
     let texture=textureLoader.load(star);
+    let fogTexture=new THREE.TextureLoader().load(fog)
+    fogTexture.wrapS = fogTexture.wrapT = THREE.RepeatWrapping;
     this.shader=new THREE.ShaderMaterial({
       side:THREE.DoubleSide,
       uniforms: {
         u_Resolution: {
+          value: {
+            x: window.innerWidth,
+            y: window.innerHeight
+          }
+        },
+        resolution:{
           value: {
             x: window.innerWidth,
             y: window.innerHeight
@@ -103,6 +112,30 @@ export default class beisaierLine extends Base3d{
         },
         uThirdColor:{
           value:new THREE.Color(0x5C10F5)
+        },
+        uMiddleColor:{
+          value:new THREE.Color(0x00A8FF)
+        },
+        uTriAngleColor:{
+          value:new THREE.Color(0x00A8FF)
+        },
+        uFog:{
+          value:fogTexture
+        },
+        PI:{
+          value:3.1415926
+        },
+        UfogColor:{
+          value:new THREE.Color(0x008EFD)
+        },
+        time:{
+          value:0.0
+        },
+        shift:{
+          value:0.2
+        },
+        startX:{
+          value:0.0
         }
       },
       vertexShader: `
@@ -120,8 +153,20 @@ export default class beisaierLine extends Base3d{
         uniform float u_time;
         uniform sampler2D uTexture;
         uniform vec3 uFirstColor;
+        uniform vec3 uMiddleColor;
         uniform vec3 uSecondColor;
+        uniform float PI;
         uniform vec3 uThirdColor;
+        uniform vec3 uTriAngleColor;
+        uniform sampler2D uFog;
+        uniform vec3 UfogColor;
+        precision mediump float;
+        uniform vec2      resolution;
+        uniform float     time;
+        uniform float     alpha;
+        uniform vec2      speed;
+        uniform float     shift;
+        uniform float startX;
         float remain(float x,float num){
             return x-floor(x/num)*num;
         }
@@ -135,13 +180,70 @@ export default class beisaierLine extends Base3d{
               float y=pow(1.0-time,2.0)*startPoint.y+2.0*time*(1.0-time)*heightPoint.y+pow(time,2.0)*endPoint.y;
               return ceil(isBigerThanZero(uVu.x-(x-lineRadius))*isBigerThanZero((x-uVu.x))*(isBigerThanZero(uVu.y-(y-lineRadius)))*isBigerThanZero(y-uVu.y));
         }
-
+        float hasColor(vec3 color){
+              return ceil((color.x+color.y+color.z)/10.0);
+        }
+        //生成随机数
+        float rand(vec2 n) {
+          //This is just a compounded expression to simulate a random number based on a seed given as n
+            return fract(cos(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+        }
+        //烟雾噪声
+        float noise(vec2 n) {
+          //Uses the rand function to generate noise
+          const vec2 d = vec2(0.0, 1.0);
+          vec2 b = floor(n), f = smoothstep(vec2(0.0), vec2(1.0), fract(n));
+          return mix(mix(rand(b), rand(b + d.yx), f.x), mix(rand(b + d.xy), rand(b + d.yy), f.x), f.y);
+        }
+        //分式布朗运动
+        float fbm(vec2 n) {
+          //fbm stands for "Fractal Brownian Motion" https://en.wikipedia.org/wiki/Fractional_Brownian_motion
+          float total = 0.0, amplitude = 1.0;
+          for (int i = 0; i < 4; i++) {
+            total += noise(n) * amplitude;
+            n += n;
+            amplitude *= 0.5;
+          }
+          return total;
+        }
+        //是否是奇数
+        float isSingleNum(float x){
+              return ceil(remain(x,2.0));
+        }
+        //单调递增函数
+        float singleIncrease(float x){
+              x=remain(x,PI*2.0);
+              float sinData=1.0-ceil(step(PI/2.0,remain(x,PI)));//是否使用sin函数
+              float cosData=isSingleNum(floor(x/(PI/2.0)));//是否使用cos函数
+              return cosData*abs(cos(x))+sinData*abs(sin(x))+0.05;
+        }
+        //计算在一个三角的两边画线
+        float getAngle(float angle,float x,float y){
+              float angle2=angle/2.0;
+              float leftWidth=1.0-x;
+              return step(abs(tan(angle2)-(-((uVu.x-x)))/abs(uVu.y-y)),0.01);
+        }
+        vec3 getAngleColor(float x){
+             return uTriAngleColor*getAngle(PI/40.0,singleIncrease(x/4.0),0.5);
+        }
+        float moreThanColor(vec3 color,float min){
+              return step(min,color.x+color.y+color.z);
+        }
         vec4 getColor(){
              float num=remain(uVu.x,0.03);
              vec3 color1=uFirstColor*step(0.01,num);
              vec3 color2=uSecondColor*step(0.02,num);
              vec3 color3=uThirdColor*(1.0-ceil(step(0.01,num)));
-             return vec4(color1+color2+color3,1.0);
+             vec3 middleColor=uMiddleColor*step(0.45,uVu.y)*(1.0-step(0.55,uVu.y));
+             return vec4(middleColor+getAngleColor(0.1+u_time)+getAngleColor(0.4+u_time)+getAngleColor(0.8+u_time),1.0);
+        }
+        vec4 moreLightColor(float start_x,float length){
+             return (1.0-step(start_x,uVu.x))*step(start_x-length,uVu.x)*smoothstep(start_x-length,start_x,uVu.x)*vec4(1.0,1.0,1.0,1.0)*0.6;
+        }
+        float inMiddle(float per){
+              float startY=per/2.0;
+              float endY=1.0-per/2.0;
+              return step(startY,uVu.y)*(1.0-step(endY,uVu.y));
         }
         void main(){
           vec4 color=texture2D(uTexture,uVu);
@@ -151,14 +253,33 @@ export default class beisaierLine extends Base3d{
           // }else{
           // gl_FragColor = vec4(1.0,1.0,1.0,0.0);
           // }
-           gl_FragColor = getColor()*step((uVu.x-sin(u_time)),0.0);
-           //gl_FragColor = color;
+           //gl_FragColor = getColor()*step((uVu.x-sin(u_time)),0.0);
+            const vec3 c1 = vec3(126.0/255.0, 0.0/255.0, 97.0/255.0);
+            const vec3 c2 = vec3(173.0/255.0, 0.0/255.0, 161.4/255.0);
+            const vec3 c3 = vec3(0.2, 0.0, 0.0);
+            const vec3 c4 = vec3(164.0/255.0, 1.0/255.0, 214.4/255.0);
+            const vec3 c5 = vec3(0.1);
+            const vec3 c6 = vec3(0.9);
+
+            //This is how "packed" the smoke is in our area. Try changing 8.0 to 1.0, or something else
+            vec2 p = gl_FragCoord.xy * 8.0 / resolution.xx;
+            //The fbm function takes p as its seed (so each pixel looks different) and time (so it shifts over time)
+            float q = fbm(p - time * 0.1);
+            vec2 r = vec2(fbm(p + q + time * speed.x - p.x - p.y), fbm(p + q - time * speed.y));
+            vec3 c = mix(c1, c2, fbm(p + r)) + mix(c3, c4, r.x) - mix(c5, c6, r.y);
+            float grad = gl_FragCoord.y / resolution.y;
+            vec4 lightColor=getColor();
+            vec4 resultColor = ceil(1.0-hasColor(lightColor.xyz))*vec4(c * cos(shift * gl_FragCoord.y / resolution.y), 1.0)+lightColor+moreLightColor(singleIncrease((0.8+u_time)/4.0),0.2);
+            resultColor=resultColor*inMiddle(0.4)+vec4(uTriAngleColor,0.8)*rand(uVu)*(1.0-inMiddle(0.4))*hasColor(lightColor.xyz);
+            gl_FragColor=resultColor*ceil(1.0-step(startX,uVu.x));
+            //gl_FragColor.xyz *= 1.0-grad;
+           //gl_FragColor = getColor()+moreThanColor(texture2D(uFog,uVu.xy).xyz,1.0+sin(u_time))*vec4(UfogColor,1.0);
         }
       `,
     })
     this.scene.add(new THREE.Mesh(bufferGeotry,this.shader))
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
-    this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
+    //this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
     //this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture,null))
     // this.scene.add(new THREE.Mesh(plane,new THREE.MeshBasicMaterial({
     //   color:new THREE.Color(0xfffff),
@@ -167,9 +288,12 @@ export default class beisaierLine extends Base3d{
     //this.scene.add(new THREE.Mesh(plane,this.shader))
   }
   render() {
-  //   //super.render();
-    this.composer.getComposer().render();
-    this.shader.uniforms.u_time.value+=0.01;
-    requestAnimationFrame( this.render.bind(this));
+    super.render();
+    //this.composer.getComposer().render();
+    this.shader.uniforms.u_time.value+=0.015;
+    // this.shader.uniforms.u_time.value+=0.01;
+    this.shader.uniforms.time.value+=0.01;
+    this.shader.uniforms.startX.value+=0.008;
+    //requestAnimationFrame( this.render.bind(this));
   }
 }

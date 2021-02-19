@@ -60,14 +60,13 @@ export default class weilan2 extends Base3d{
           float second=step(value,vUv.x)*ceil(1.0-step(value*2.0,vUv.x));
           float third=step(value*2.0,vUv.x);
           vec4 color=vec4(uFirstColor,1.0)*first+vec4(uSecondColor,1.0)*second+vec4(uThirdColor,1.0)*third;
-          color*=abs(sin(abs(positionN.x)));
-          gl_FragColor=color;
+          gl_FragColor=color*floor(abs(positionN.x+positionN.y)/0.05);
           //gl_FragColor = vec4(vUv.x,vUv.y*sin(u_time),0.5,1.0);
           // gl_FragColor = vec4(0.5,0.2,0.5,1.0)*v_position.z;
         }
       `
     })
-    loader.load(baseURL+"/static/models/sichuan_fence.obj",(obj)=>{
+    loader.load(baseURL+"/static/models/wj_wall_mask_3.obj",(obj)=>{
       // console.log(obj);
       // return
       // let mesh=new THREE.Mesh(obj,new THREE.MeshBasicMaterial({color:"0xFFFFF"}));
@@ -75,10 +74,10 @@ export default class weilan2 extends Base3d{
       //obj.children[0].material=new THREE.MeshBasicMaterial({color:0x0D559E,side:THREE.DoubleSide});
       obj.children[0].material=this.shader;
       this.scene.add(obj)
-      obj.position.setX(obj.position.x-500)
-      obj.position.setY(obj.position.y+200)
+      // obj.position.setX(obj.position.x-500)
+      // obj.position.setY(obj.position.y+200)
       //obj.position.setY(obj.position.z+5552)
-      obj.scale.set(0.0005,0.0005,0.005)
+      obj.scale.set(0.02,0.02,0.1)
       obj.rotateY(Math.PI)
     });
   }
