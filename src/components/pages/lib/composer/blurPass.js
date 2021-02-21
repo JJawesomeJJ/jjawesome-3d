@@ -122,7 +122,7 @@ export default class blurPss extends BaseShaderPass{
                             }
                             void main() {
                                   //gl_FragColor=vec4(1.0,0.0,0.0,0.8);
-                                gl_FragColor=getColor3(0.04,0.020);
+                                gl_FragColor=getColor3(0.01,0.002);
                                // gl_FragColor = getColor();
                             }
                         `,

@@ -8,7 +8,8 @@ import FlowLightPass from "./composer/FlowLightPass";
 import outLinePass from "./composer/outLinePass";
 import activeShaderPass from "./composer/activeShaderPass";
 import star from '../../../assets/images/star.png'
-import fog from '../../../assets/images/fog.png'
+// import fog from '../../../assets/images/fog.png'
+import magic from '../../../assets/images/magic.png'
 export default class beisaierLine extends Base3d{
   constructor(props) {
     super();
@@ -78,12 +79,91 @@ export default class beisaierLine extends Base3d{
     bufferGeotry.setAttribute("uv",new BufferAttribute(buff[1],2))
     console.log(bufferGeotry)
     let plane=new THREE.BoxGeometry(300,10,10,20,40);
+    this.magicMaterial = new THREE.ShaderMaterial({
+      // depthWrite: true,
+      depthTest: true,
+      transparent: true,
+      // opacity: 0.3,
+      side:THREE.DoubleSide,
+      uniforms: {
+        u_time: {
+          'type': "f",
+          'value': 0.0,
+        },
+        uTexture:{
+          value:new THREE.TextureLoader().load(magic)
+        },
+        PI:{
+          value:Math.PI
+        },
+        startX:{
+          value:0.0
+        },
+        uCircleColor:{
+          value:new THREE.Color(0x93008F)
+        }
+      },
+      vertexShader: `
+          varying vec2 uVu;
+          void main(){
+              uVu=uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+          }
+        `,
+      fragmentShader: `
+          varying vec2 uVu;
+          uniform float u_time;
+          uniform float PI;
+          uniform float startX;
+          uniform sampler2D uTexture;
+          uniform vec3 uCircleColor;
+          float remain(float x,float num){
+                return x-floor(x/num)*num;
+          }
+          //是否是奇数
+          float isSingleNum(float x){
+                return ceil(remain(x,2.0));
+          }
+          float circleMax(float min){
+                return step(min,distance(uVu.xy,vec2(0.5,0.5)));
+          }
+          float circleMin(float max){
+                return step(distance(uVu.xy,vec2(0.5,0.5)),max);
+          }
+          float hasColor(vec3 color){
+                return ceil((color.x+color.y+color.z)/10.0);
+          }
+          float singleIncrease(float x){
+              x=remain(x,PI*2.0);
+              float sinData=1.0-ceil(step(PI/2.0,remain(x,PI)));//是否使用sin函数
+              float cosData=isSingleNum(floor(x/(PI/2.0)));//是否使用cos函数
+              return cosData*abs(cos(x))+sinData*abs(sin(x))+0.05;
+          }
+          float singleSub(float x){
+              x=remain(x,PI*2.0);
+              float sinData=1.0-ceil(step(PI/2.0,remain(x,PI)));//是否使用sin函数
+              float cosData=isSingleNum(floor(x/(PI/2.0)));//是否使用cos函数
+              return (1.0-cosData)*abs(cos(x))+(1.0-sinData)*abs(sin(x));
+          }
+          void main(){
+               vec4 color=texture2D(uTexture,uVu.xy)*step(distance(uVu.xy,vec2(0.5,0.5)),startX);
+               color=hasColor(color.xyz)*vec4(uCircleColor,1.0)*circleMin((singleSub((u_time)/4.0)))+color;
+               gl_FragColor = color;
+          }
+        `,
+    });
+    let mesh=new THREE.Mesh(new THREE.CircleGeometry(30,32), this.magicMaterial);
+    mesh.position.set(-200,0.0,55.0)
+    mesh.rotateY(Math.PI/2)
+    mesh.rotateX(Math.PI/1.5)
+    this.scene.add(mesh)
     // this.scene.add(new THREE.Mesh(bufferGeotry,new THREE.MeshBasicMaterial({color:0x2664FC,side:THREE.DoubleSide})))
     var textureLoader = new THREE.TextureLoader();
     let texture=textureLoader.load(star);
-    let fogTexture=new THREE.TextureLoader().load(fog)
-    fogTexture.wrapS = fogTexture.wrapT = THREE.RepeatWrapping;
+    // let fogTexture=new THREE.TextureLoader().load(fog)
+    // fogTexture.wrapS = fogTexture.wrapT = THREE.RepeatWrapping;
     this.shader=new THREE.ShaderMaterial({
+      transparent:true,
       side:THREE.DoubleSide,
       uniforms: {
         u_Resolution: {
@@ -119,11 +199,11 @@ export default class beisaierLine extends Base3d{
         uTriAngleColor:{
           value:new THREE.Color(0x00A8FF)
         },
-        uFog:{
-          value:fogTexture
-        },
+        // uFog:{
+        //   value:fogTexture
+        // },
         PI:{
-          value:3.1415926
+          value:Math.PI
         },
         UfogColor:{
           value:new THREE.Color(0x008EFD)
@@ -224,7 +304,7 @@ export default class beisaierLine extends Base3d{
               return step(abs(tan(angle2)-(-((uVu.x-x)))/abs(uVu.y-y)),0.01);
         }
         vec3 getAngleColor(float x){
-             return uTriAngleColor*getAngle(PI/40.0,singleIncrease(x/4.0),0.5);
+             return uTriAngleColor*getAngle(PI/(20.0/abs(singleIncrease((u_time+0.8)/4.0))),singleIncrease(x/4.0),0.5);
         }
         float moreThanColor(vec3 color,float min){
               return step(min,color.x+color.y+color.z);
@@ -280,8 +360,8 @@ export default class beisaierLine extends Base3d{
     })
     this.scene.add(new THREE.Mesh(bufferGeotry,this.shader))
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
-    //this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
-    //this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture,null))
+    this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
+   // this.composer.addPass(new activeShaderPass().getPass(this.composer.getComposer().renderTarget2.texture,this.composer.getComposer().renderTarget2.texture))
     // this.scene.add(new THREE.Mesh(plane,new THREE.MeshBasicMaterial({
     //   color:new THREE.Color(0xfffff),
     //   side:THREE.DoubleSide
@@ -289,12 +369,14 @@ export default class beisaierLine extends Base3d{
     //this.scene.add(new THREE.Mesh(plane,this.shader))
   }
   render() {
-    super.render();
-    //this.composer.getComposer().render();
+    // super.render();
+    this.composer.getComposer().render();
     this.shader.uniforms.u_time.value+=0.015;
     // this.shader.uniforms.u_time.value+=0.01;
     this.shader.uniforms.time.value+=0.01;
     this.shader.uniforms.startX.value+=0.008;
-    //requestAnimationFrame( this.render.bind(this));
+    this.magicMaterial.uniforms.u_time.value+=0.015;
+    this.magicMaterial.uniforms.startX.value+=0.008;
+    requestAnimationFrame( this.render.bind(this));
   }
 }

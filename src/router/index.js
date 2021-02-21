@@ -7,6 +7,7 @@ import scan from "../components/pages/scan"
 import line from "../components/pages/line";
 import outline from "../components/pages/outline";
 import weilan from "../components/pages/weilan";
+import line2 from "../components/pages/lib/line2";
 
 Vue.use(Router);
 
@@ -46,6 +47,11 @@ export default new Router({
       path: '/weilan',
       name:'weilan',
       component: weilan
+    },
+    {
+      path: '/line2',
+      name:'line2',
+      component: line2
     }
   ]
 })
