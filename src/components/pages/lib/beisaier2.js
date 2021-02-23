@@ -103,7 +103,8 @@ export default class beisaier2 extends Base3d{
                vec4 lightColor=step(singleIncrease(u_time),uVu.x)*step(uVu.x,singleIncrease(u_time)+uLightPercent)*vec4(uLightColor,1.0);
                float middleX=singleIncrease(u_time)+uLightPercent/2.0;
                lightColor=lightColor*(1.0-abs(middleX-uVu.x)*5.0);
-               vec4 HightColor=vec4(1.0,1.0,1.0,1.0)*ellipseRatio(middleX,0.5,0.01,0.5)*(1.0-dispersed(abs(uVu.x-middleX),100.0)/100.0);
+               vec4 HightColor=vec4(1.0,1.0,1.0,1.0)*ellipseRatio(middleX,0.5,0.01,0.5);
+               HightColor+=(1.0-hasColor(HightColor.xyz))*(1.0-dispersed(abs(uVu.x-middleX),100.0)/100.0);
                return lightColor+HightColor;
           }
           void main(){
@@ -114,10 +115,216 @@ export default class beisaier2 extends Base3d{
           }
         `,
     });
-    this.scene.add(new THREE.Mesh(line,this.lineMaterial))
+    this.scene.add(new THREE.Mesh(line,this.lineMaterial));
+    this.magicMaterial= new THREE.ShaderMaterial({
+      // depthWrite: true,
+      depthTest: true,
+      transparent: true,
+      // opacity: 0.3,
+      side:THREE.DoubleSide,
+      uniforms: {
+        u_time: {
+          'type': "f",
+          'value': 0.0,
+        },
+        uTexture:{
+          value:new THREE.TextureLoader().load(magic)
+        },
+        PI:{
+          value:Math.PI
+        },
+        startX:{
+          value:0.0
+        },
+        uCircleColor:{
+          value:new THREE.Color(0x4CD09A)
+        },
+        uBaseLightColor:{
+          value:new THREE.Color(0x00A84A)
+        }
+      },
+      vertexShader: `
+          varying vec2 uVu;
+          void main(){
+              uVu=uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+          }
+        `,
+      fragmentShader: `
+          varying vec2 uVu;
+          uniform float u_time;
+          uniform float PI;
+          uniform float startX;
+          uniform sampler2D uTexture;
+          uniform vec3 uCircleColor;
+          uniform vec3 uBaseLightColor;
+          float remain(float x,float num){
+                return x-floor(x/num)*num;
+          }
+          //是否是奇数
+          float isSingleNum(float x){
+                return ceil(remain(x,2.0));
+          }
+          float circleMax(float min){
+                return step(min,distance(uVu.xy,vec2(0.5,0.5)));
+          }
+          float circleMin(float max){
+                return step(distance(uVu.xy,vec2(0.5,0.5)),max);
+          }
+          float hasColor(vec3 color){
+                return ceil((color.x+color.y+color.z)/10.0);
+          }
+          float singleIncrease(float x){
+              x=remain(x,PI*2.0);
+              float sinData=1.0-ceil(step(PI/2.0,remain(x,PI)));//是否使用sin函数
+              float cosData=isSingleNum(floor(x/(PI/2.0)));//是否使用cos函数
+              return cosData*abs(cos(x))+sinData*abs(sin(x))+0.05;
+          }
+          float singleSub(float x){
+              x=remain(x,PI*2.0);
+              float sinData=1.0-ceil(step(PI/2.0,remain(x,PI)));//是否使用sin函数
+              float cosData=isSingleNum(floor(x/(PI/2.0)));//是否使用cos函数
+              return (1.0-cosData)*abs(cos(x))+(1.0-sinData)*abs(sin(x));
+          }
+          vec4 getCircleColor(float baseTimeAdd,float width){
+                return (vec4(uCircleColor,1.0)+(vec4(1.0,1.0,1.0,1.0))*0.2)*circleMin(singleIncrease((u_time+baseTimeAdd)/4.0)*0.5)*circleMax(singleIncrease((u_time+baseTimeAdd-width)/4.0)*0.5)*(0.8-distance(vec2(uVu),vec2(0.5,0.5)));
+          }
+          vec4 getCircleColorFixed(float min,float max){
+                return (vec4(uCircleColor,1.0))*circleMin(min)*circleMax(max);
+          }
+          vec4 getLightColor(){
+               vec4 lightColor = vec4(uBaseLightColor,0.4-distance(vec2(uVu),vec2(0.5,0.5)));
+               lightColor+=hasColor(lightColor.xyz)*vec4(1.0,1.0,1.0,1.0)*(0.4-distance(vec2(uVu),vec2(0.5,0.5)))*0.5;
+               return lightColor;
+          }
+          void main(){
+               vec4 color=texture2D(uTexture,uVu.xy)*step(distance(uVu.xy,vec2(0.5,0.5)),startX);
+               color=hasColor(color.xyz)*vec4(uCircleColor,1.0)*circleMin((singleSub((u_time)/4.0)))+color;
+               gl_FragColor = getCircleColor(0.0,0.1)+getCircleColor(0.5,0.1)+getCircleColor(1.0,0.1)+getCircleColor(1.5,0.1)
+                              +getCircleColorFixed(0.2,0.18)+getLightColor()
+               ;
+          }
+        `,
+    });
+    let mesh=new THREE.Mesh(new THREE.CircleGeometry(30,32), this.magicMaterial);
+    this.fireMaterial = new THREE.ShaderMaterial({
+      // depthWrite: true,
+      depthTest: true,
+      transparent: true,
+      opacity: 0.9,
+      side:THREE.DoubleSide,
+      uniforms: {
+        u_time: {
+          'type': "f",
+          'value': 0.0,
+        },
+        uTexture:{
+          value:new THREE.TextureLoader().load(magic)
+        },
+        PI:{
+          value:Math.PI
+        },
+        startX:{
+          value:0.0
+        },
+        uCircleColor:{
+          value:new THREE.Color(0x4CD09A)
+        },
+        uBaseLightColor:{
+          value:new THREE.Color(0x00A84A)
+        }
+      },
+      vertexShader: `
+          varying vec2 uVu;
+          void main(){
+              uVu=uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+          }
+        `,
+      fragmentShader: `
+         precision mediump float;
+        uniform sampler2D u_Sampler;
+        uniform float u_time;
+        varying vec2 uVu;
+
+        float noise(vec3 p){
+            vec3 i = floor(p);
+            vec4 a = dot(i, vec3(1., 57., 21.)) + vec4(0., 57., 21., 78.);
+            vec3 f = cos((p-i)*acos(-1.))*(-.5)+.5;
+            a = mix(sin(cos(a)*a),sin(cos(1.+a)*(1.+a)), f.x);
+            a.xy = mix(a.xz, a.yw, f.y);
+            return mix(a.x, a.y, f.z);
+        }
+
+        float sphere(vec3 p, vec4 spr){
+            return length(spr.xyz-p) - spr.w;
+        }
+
+        float flame(vec3 p){
+            float d = sphere(p*vec3(1.,.5,1.), vec4(.0,-1.,.0,1.));
+            return d + (noise(p+vec3(.0,u_time*2.,.0)) + noise(p*3.)*.5)*.25*(p.y) ;
+        }
+
+        float scene(vec3 p){
+            return min(100.-length(p) , abs(flame(p)) );
+        }
+
+        vec4 raymarch(vec3 org, vec3 dir){
+            float d = 0.0, glow = 0.0, eps = 0.02;
+            vec3  p = org;
+            bool glowed = false;
+
+            for(int i=0; i<64; i++)
+            {
+                d = scene(p) + eps;
+                p += d * dir;
+                if( d>eps )
+                {
+                    if(flame(p) < .0)
+                        glowed=true;
+                    if(glowed)
+                        glow = float(i)/64.;
+                }
+            }
+            return vec4(p,glow);
+        }
+        float hasColor(vec3 color){
+              return (color.x+color.z+color.z)/10.0;
+        }
+
+        void main() {
+            vec2 v = -1.5 + 3. * uVu;
+
+            vec3 org = vec3(0., -2., 4.);
+            vec3 dir = normalize(vec3(v.x*1.6, -v.y, -1.5));
+
+            vec4 p = raymarch(org, dir);
+            float glow = p.w;
+
+            vec4 col = mix(vec4(1.,.5,.1,1.), vec4(0.1,.5,1.,1.), p.y*.02+.4);
+
+            gl_FragColor = mix(vec4(0.), col, pow(glow*2.,4.));
+            if(hasColor(gl_FragColor.xyz)<=0.0){
+                discard;
+            }
+        }`,
+    });
+    let fire = new THREE.Mesh( new THREE.PlaneGeometry( 60, 60, 6 ), this.fireMaterial );
+    this.scene.add( fire );
+    fire.position.set(-200,30.1,55.0)
+    mesh.position.set(-200,0.0,55.0)
+    mesh.rotation.set(2.150,-3.580,0.0)
+    this.scene.add(mesh)
+    this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
+    this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
   }
   render() {
-    super.render();
+   // requestAnimationFrame( this.render.bind(this));
+    //this.composer.getComposer().render();
+     super.render();
+    this.magicMaterial.uniforms.u_time.value+=0.015;
+    this.magicMaterial.uniforms.startX.value+=0.008;
     this.lineMaterial.uniforms.u_time.value+=0.005;
+    this.fireMaterial.uniforms.u_time.value+=0.05;
   }
 }
