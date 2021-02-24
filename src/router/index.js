@@ -7,7 +7,7 @@ import scan from "../components/pages/scan"
 import line from "../components/pages/line";
 import outline from "../components/pages/outline";
 import weilan from "../components/pages/weilan";
-import line2 from "../components/pages/lib/line2";
+import line2 from "../components/pages/line2";
 
 Vue.use(Router);
 
