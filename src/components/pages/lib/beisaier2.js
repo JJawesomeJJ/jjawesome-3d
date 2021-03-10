@@ -8,12 +8,19 @@ import FlowLightPass from "./composer/FlowLightPass";
 import outLinePass from "./composer/outLinePass";
 import activeShaderPass from "./composer/activeShaderPass";
 import star from '../../../assets/images/star.png'
-// import fog from '../../../assets/images/fog.png'
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
+import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer";
 import magic from '../../../assets/images/magic.png'
 import beisaier from "./geometryFactory/beisaier";
+import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 export default class beisaier2 extends Base3d{
   init() {
     super.init();
+    this.labelRenderer = new CSS2DRenderer();
+    this.labelRenderer.setSize(window.innerWidth,window.innerHeight)
+    this.labelRenderer.domElement.style.position = "absolute";
+    this.labelRenderer.domElement.style.top = 0;
+    document.body.appendChild( this.labelRenderer.domElement );
     let line=new beisaier().getGeometry({x:-200,y:0.0,z:50.0},{x:200.0,y:0.0,z:80},{x:160.0,y:300,z:71.0},2);
     this.lineMaterial = new THREE.ShaderMaterial({
       // depthWrite: true,
@@ -25,9 +32,6 @@ export default class beisaier2 extends Base3d{
         u_time: {
           'type': "f",
           'value': 0.0,
-        },
-        uTexture:{
-          value:new THREE.TextureLoader().load(magic)
         },
         PI:{
           value:Math.PI
@@ -103,8 +107,8 @@ export default class beisaier2 extends Base3d{
                vec4 lightColor=step(singleIncrease(u_time),uVu.x)*step(uVu.x,singleIncrease(u_time)+uLightPercent)*vec4(uLightColor,1.0);
                float middleX=singleIncrease(u_time)+uLightPercent/2.0;
                lightColor=lightColor*(1.0-abs(middleX-uVu.x)*5.0);
-               vec4 HightColor=vec4(1.0,1.0,1.0,1.0)*ellipseRatio(middleX,0.5,0.01,0.5);
-               HightColor+=(1.0-hasColor(HightColor.xyz))*(1.0-dispersed(abs(uVu.x-middleX),100.0)/100.0);
+               vec4 HightColor=vec4(1.0,1.0,1.0,1.0)*ellipseRatio(middleX,0.5,0.005,0.3);
+               //HightColor+=(1.0-hasColor(HightColor.xyz))*(1.0-dispersed(abs(uVu.x-middleX),100.0)/100.0);
                return lightColor+HightColor;
           }
           void main(){
@@ -201,8 +205,9 @@ export default class beisaier2 extends Base3d{
           void main(){
                vec4 color=texture2D(uTexture,uVu.xy)*step(distance(uVu.xy,vec2(0.5,0.5)),startX);
                color=hasColor(color.xyz)*vec4(uCircleColor,1.0)*circleMin((singleSub((u_time)/4.0)))+color;
-               gl_FragColor = getCircleColor(0.0,0.1)+getCircleColor(0.5,0.1)+getCircleColor(1.0,0.1)+getCircleColor(1.5,0.1)
-                              +getCircleColorFixed(0.2,0.18)+getLightColor()
+               gl_FragColor = getCircleColor(PI/4.0,0.1)+getCircleColor(PI/2.0,0.1)+getCircleColor(PI,0.1)+getCircleColor(PI*2.0/4.0,0.1)+getCircleColor(PI*3.0/4.0,0.1)+getCircleColor(PI*4.0/4.0,0.1)+getCircleColor(PI*5.0/4.0,0.1)+getCircleColor(PI*1.5,0.1)
+                              +getCircleColor(PI*2.0,0.1)
+                              +getLightColor()
                ;
           }
         `,
@@ -299,10 +304,9 @@ export default class beisaier2 extends Base3d{
             }
             return vec4(p,glow);
         }
-        float hasColor(vec3 color){
-              return ceil((color.x+color.z+color.z)/10.0);
-        }
-
+          float hasColor(vec3 color){
+                return ceil((color.x+color.z+color.z)/10.0);
+          }
           float ellipseRatio(float x,float y,float max,float min){
                 float result=pow(uVu.x-x,2.0)/pow(max,2.0)+pow(uVu.y-y,2.0)/pow(min,2.0);
                 return step(result,1.0);
@@ -322,7 +326,7 @@ export default class beisaier2 extends Base3d{
               // if(uVu.y>=0.8){
               //max=max*(1.0-y);
               // }
-              max+=0.03*(1.0-uVu.y);
+              max+=0.04*(0.5-uVu.y);
               return ellipseRatio(0.5,y,max,0.2)*vec4(uBaseFireColor,0.3);
           }
           vec4 getOutFireColor(){
@@ -447,7 +451,8 @@ export default class beisaier2 extends Base3d{
           }
           vec4 lightColor(float width,float y,float x_){
                float x=uVu.x+singleIncrease(u_time+y)+x_;
-               return step(abs(uVu.y-singleIncrease(u_time+y)),width)*vec4(uCircleColor,0.9)*step(abs(uVu.x-x_),0.007);
+               //return step(distance(vec2(x,singleIncrease(u_time+y)),uVu),0.007)*vec4(uCircleColor,0.9);
+               return step(abs(uVu.y-singleIncrease(u_time+y)),width)*vec4(uCircleColor,0.9)*step(abs(uVu.x-x_),0.004);
           }
           vec4 getLightColor(){
                vec3 vPosition1=normalize(vPosition);
@@ -469,10 +474,16 @@ export default class beisaier2 extends Base3d{
           }
         `,
     });
+
     let particle=new THREE.Mesh(new THREE.CylinderGeometry( 15, 6, 140, 32 ),this.particleMaterial)
     let fire = new THREE.Mesh( new THREE.PlaneGeometry( 60, 120, 6 ), this.fireMaterial );
     this.scene.add( fire );
     this.scene.add(particle)
+    let aiDom=document.querySelector("#ai_logo");
+
+    let aiLable=new CSS2DObject( aiDom );
+    aiLable.position.set(-200,-12.0,55.0);
+    this.scene.add(aiLable)
     particle.position.set(-200,65.1,55.0)
     fire.position.set(-200,55.0,55.0)
     mesh.position.set(-200,0.0,55.0)
@@ -480,11 +491,14 @@ export default class beisaier2 extends Base3d{
     this.scene.add(mesh)
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
     this.composer.addPass(new blurPass().getPass([this.composer.getComposer().renderTarget2.texture]))
+    let controls = new OrbitControls( this.camera, this.labelRenderer.domElement );
   }
   render() {
    // requestAnimationFrame( this.render.bind(this));
     //this.composer.getComposer().render();
      super.render();
+     this.labelRenderer.render(this.scene,this.camera);
+     //this.composer.getComposer().render()
     this.magicMaterial.uniforms.u_time.value+=0.015;
     this.magicMaterial.uniforms.startX.value+=0.008;
     this.lineMaterial.uniforms.u_time.value+=0.005;

@@ -7,6 +7,7 @@ export default class Base3d {
   }
   init(){
     this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+    window.camera=this.camera;
     //相机
     this.renderer = new THREE.WebGLRenderer();//渲染器
     this.scene = new THREE.Scene();//场景

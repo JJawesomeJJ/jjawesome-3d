@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <img :src=ai alt="">
+  <div id="ai_logo">
+    <img style="width: 50px;height: 50px;background-size: 100% 100%" :src=ai alt="">
   </div>
 </template>
 

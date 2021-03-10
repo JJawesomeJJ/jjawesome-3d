@@ -8,6 +8,7 @@ import line from "../components/pages/line";
 import outline from "../components/pages/outline";
 import weilan from "../components/pages/weilan";
 import line2 from "../components/pages/line2";
+import road from "../components/pages/road";
 
 Vue.use(Router);
 
@@ -52,6 +53,11 @@ export default new Router({
       path: '/line2',
       name:'line2',
       component: line2
+    },
+    {
+      path: '/road',
+      name:'road',
+      component: road
     }
   ]
 })
