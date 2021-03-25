@@ -11,6 +11,8 @@ import config from "./config/config";
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 // import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import exportTextureUtil from "./utils/exportTextureUtil";
+
 
 Vue.config.productionTip = false;
 Vue.use(THREE);

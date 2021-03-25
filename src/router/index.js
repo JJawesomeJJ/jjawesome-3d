@@ -9,6 +9,9 @@ import outline from "../components/pages/outline";
 import weilan from "../components/pages/weilan";
 import line2 from "../components/pages/line2";
 import road from "../components/pages/road";
+import tree from "../components/pages/tree";
+import light from "../components/pages/light";
+// import reflector from "../components/pages/reflector";
 
 Vue.use(Router);
 
@@ -58,6 +61,21 @@ export default new Router({
       path: '/road',
       name:'road',
       component: road
-    }
+    },
+    {
+      path: '/tree',
+      name:'tree',
+      component: tree
+    },
+    {
+      path: '/light',
+      name:'light',
+      component: light
+    },
+    // {
+    //   path: '/reflector',
+    //   name:'reflector',
+    //   component:reflector
+    // }
   ]
 })
