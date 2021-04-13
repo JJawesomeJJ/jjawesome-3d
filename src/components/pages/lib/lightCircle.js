@@ -5,6 +5,7 @@ import BaseComposer from "./composer/BaseComposer";
 import {UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import blurPss from "./composer/blurPass";
 import exportTextureUtil from "../../../utils/exportTextureUtil";
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 export default class lightCircle extends Base3d{
   init() {
     super.init();
@@ -132,6 +133,7 @@ export default class lightCircle extends Base3d{
         }
       `,
     })
+    this.outlinePass = new OutlinePass(new THREE.Vector2(1920, 1080), this.scene, this.camera);
     const geometry = new THREE.CylinderGeometry(100, 100 ,50 ,40 ,80)
     const cylinder = new THREE.Mesh( geometry, this.shaderMaterial );
     const plan=new THREE.CircleGeometry(100,100,100)
@@ -140,21 +142,24 @@ export default class lightCircle extends Base3d{
     this.scene.add(floor)
     this.scene.add(cylinder)
     this.composer=new BaseComposer(this.scene,this.camera,this.renderer)
-    this.composer.addPass(new blurPss().getPass([this.composer.getComposer().renderTarget2.texture]));
+    //this.composer.addPass(new blurPss().getPass([this.composer.getComposer().renderTarget2.texture]));
+    this.composer.getComposer().addPass(this.outlinePass)
     window.composer=this.composer.getComposer();
     let self=this;
     window.runFun=function (){
-      let imageStream=new exportTextureUtil().threePixelStream(self.renderer,self.composer.getComposer().renderTarget1)
+      console.log(self.renderer.getRenderTarget(),"render")
+      let imageStream=new exportTextureUtil().threePixelStream(window.composer.renderer,window.composer.renderTarget2)
     }
   }
   render() {
     requestAnimationFrame( this.render.bind(this) );
-    this.composer.getComposer().render()
+
     this.shaderMaterial.uniforms.u_time.value+=0.01;
     this.floorShaderMaterial.uniforms.u_time.value+=0.005;
     if(this.shaderMaterial.uniforms.uLight.value<=1.0){
       this.shaderMaterial.uniforms.uLight.value+=0.01;
     }
+    window.composer.render()
     //super.render();
   }
 }

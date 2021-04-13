@@ -6,8 +6,13 @@ import Base3d from "./Base3d";
 import baseURL from "../../../config/config";
 import Timer from "./until/Timer";
 import roadImg from "../../../assets/images/road.png"
+import {ShaderPass} from "three/examples/jsm/postprocessing/ShaderPass";
+import BaseComposer from "./composer/BaseComposer";
+import {UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import blurPass from "./composer/blurPass";
 export default class road extends Base3d{
   init() {
+    this.scene2=new THREE.Scene();
     this.roadLineMaterial=new THREE.ShaderMaterial({
       // depthWrite: true,
       depthTest: true,
@@ -175,13 +180,53 @@ export default class road extends Base3d{
         }
 
       })
-      this.scene.add(obj);
+      let obj2=obj.clone();
+      obj2.traverse((ele)=>{
+        //ele.scale.setY(0.01)
+        ele.material=new THREE.MeshBasicMaterial({color:0xF60606});
+      })
+      this.scene2.add(obj2);
+      console.log(obj2)
+      this.scene.add(obj)
     })
     let mesh=new THREE.Mesh(new THREE.PlaneGeometry(1000,20,30),this.roadMaterial)
     let mesh2=mesh.clone();
     mesh2.material=new THREE.MeshBasicMaterial({map:roadTexture});
     mesh2.position.setZ(-5.0);
     //this.scene.add(mesh2)
+    this.baseComposer=new BaseComposer(this.scene2,this.camera,this.renderer);
+    this.blurPass=(new blurPass()).getPass([this.baseComposer.getComposer().renderTarget2.texture,this.baseComposer.getComposer().renderTarget2.depthTexture]);
+    //this.finalComposer.addPass(new UnrealBloomPass(new THREE.Vector2(3840,1570),20.0,2.0,2.0))
+    this.baseComposer.addPass(this.blurPass)
+    this.baseComposer.getComposer().renderToScreen=true;
+    this.finalComposer=new BaseComposer(this.scene,this.camera,this.renderer)
+    this.baseComposer.addPass(new ShaderPass(new THREE.ShaderMaterial({
+      uniforms: {
+        baseTexture: { value: null },
+        lightTexture:{
+          value:this.finalComposer.getComposer().renderTarget2.texture
+        }
+      },
+      vertexShader: `
+                            varying vec2 vUv;
+                            varying float blur_size;
+                            void main() {
+                                vUv = uv;
+                                vec4 position2=vec4( position, 1.0 );
+                                gl_Position = projectionMatrix * modelViewMatrix * position2;
+                                blur_size=normalize(position2).z;
+
+                            }
+                        `,
+      fragmentShader: `
+                            uniform sampler2D baseTexture;
+                            varying vec2 vUv;
+                            uniform sampler2D lightTexture;
+                            void main() {
+                                gl_FragColor=texture2D(baseTexture,vUv)+texture2D(lightTexture,vUv);
+                            }
+                        `,
+    }),'baseTexture'))
   }
   render() {
     if(this.roadMaterial.uniforms.uStartx.value<=2.0){
@@ -194,6 +239,13 @@ export default class road extends Base3d{
     // if (this.roadMaterial.uniforms.uStartx.value<=0.0){
     //   this.timer.restart("roadName")
     // }
-    super.render();
+    this.renderer.autoClear=false;
+    // this.renderer.render( this.scene2, this.camera );
+    //super.render()
+    this.finalComposer.getComposer().render()
+    this.baseComposer.getComposer().render()
+
+
+    requestAnimationFrame( this.render.bind(this) );
   }
 }

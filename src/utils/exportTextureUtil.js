@@ -53,7 +53,7 @@ export default class exportTextureUtil{
       if (!props) throw new Error(versionError)
       framebuffer = props.__webglFramebuffer
     }
-
+    console.log(framebuffer)
     opt = assign({
       flipY: true
     }, opt, {
